@@ -25,12 +25,7 @@ Node::Node(uint i):Node(i,vec3(0)){}
 
 Node::Node(uint i, vec3 v):Node(i,v,3){}
 
-Node::Node(uint i, vec3 v, float s)
-{
-  position = v;
-  index = i;
-  size = s;
-}
+Node::Node(uint i, vec3 v, float s):position(v), index(i), size(s){}
 
 #define SUBDIVISIONS 500
 vector<vec3> Node::getNodeCircle()

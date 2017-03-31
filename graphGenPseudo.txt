@@ -1,0 +1,83 @@
+graph generation pseudo algorithm
+
+class room
+
+{
+
+    int type 
+
+    float size
+
+    vector<room*> neighbours
+
+    vector<rooms> createAdjacentRooms(int type);
+
+}
+
+class floorGraph
+
+{
+
+    int type 
+
+    vector<room*> graph;
+
+    createPublicRooms();
+
+}
+
+createAdjacentRooms(int type)
+
+{
+
+    vector<room*> addedRooms;
+
+    for(random iterations)
+
+    {
+
+        room *newRoom = new Room(type);
+
+        newRoom.neighbours.push_back(this);
+
+        neighbours.push_back(newRoom);
+
+        addedRooms.push_back(newRoom);
+
+    }
+
+    return addedRooms;
+
+}
+
+createPublicRooms()
+
+{
+
+    graph.push_back(new room());
+
+    room *currentRoom = graph[0];
+
+    int count = 1;
+
+    while(random variable <= probablity)
+
+    {
+
+        concatenateVectors(graph, currentRoom.createAdjacentRooms);
+
+        
+
+        if(count < graph.size())
+
+            currentRoom = graph[count];
+
+            count++;
+
+        else
+
+            currentRoom = graph[graph.size()-1];
+
+    }
+
+}v
