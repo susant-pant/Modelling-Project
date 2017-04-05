@@ -9,7 +9,7 @@ public:
     FloorGraph(int _type):type(type){}
 
     void createPublicRooms();
-}
+};
 
 void FloorGraph::createPublicRooms()
 {
