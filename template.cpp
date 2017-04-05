@@ -39,7 +39,7 @@
 
 #include "Camera.h"
 #include "CustomOperators.h"
-#include "FloorGraph.h"
+#include "Graph.h"
 
 using namespace std;
 using namespace glm;
@@ -90,6 +90,7 @@ Graph* graph;
 //========================================================================================
 
 void error_callback(int error, const char* description);
+void resize_callback(GLFWwindow* window, int width, int height);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos);
@@ -575,6 +576,7 @@ void callBackInit(GLFWwindow* window)
 {
 	//Set GLFW callback functions
 	glfwSetErrorCallback(error_callback);
+	glfwSetWindowSizeCallback(window, resize_callback);
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetCursorPosCallback(window, cursor_pos_callback);
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
@@ -709,6 +711,11 @@ int cursorSelectNode(GLFWwindow *window)
 void error_callback(int error, const char* description)
 {
     cout << "Error: " << description << endl;
+}
+
+void resize_callback(GLFWwindow* window, int width, int height)
+{
+	glViewport(0, 0, width, height);
 }
 
 int selectedNode =-1;
