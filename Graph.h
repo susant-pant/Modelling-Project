@@ -37,7 +37,7 @@ vector<vec3> Node::getNodeCircle()
 {
   float r = size;
   vector<vec3> circle;
-  for(uint u=0; u<500; u++)
+  for(uint u=0; u<SUBDIVISIONS; u++)
   {
     circle.push_back(position +
       vec3(r*cos(2*M_PI*u/(SUBDIVISIONS-1)),0,r*sin(2*M_PI*u/(SUBDIVISIONS-1))));
@@ -53,7 +53,6 @@ public:
 
   Graph();
   Graph(Node *node);
-  Graph(Graph *oGraph);
 
   void connect(uint i, uint j);
   void addNode(Node *node);

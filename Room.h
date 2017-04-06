@@ -5,20 +5,21 @@ class Room
 public:
     int type;	//public = 0, private = 1, extra = 2
     float size;
+    uint index;
     vector<Room*> neighbours;
 
-    Room(int _type, float _size):type(_type),size(_size){}
+    Room(int _type, float _size, uint _index):type(_type), size(_size), index(_index){}
 
-    vector<Room*> createAdjacentRooms(int type, float size);
+    vector<Room*> createAdjacentRooms(uint baseIndex);
 };
 
-vector<Room*> Room::createAdjacentRooms(int type, float size)
+vector<Room*> Room::createAdjacentRooms(uint baseIndex)
 {
     vector<Room*> addedRooms;
 
-    for(int i = 0; i < (rand() % 100); i++)
+    for(uint i = 0; i <= (rand() % 5); i++)
     {
-        Room *newRoom = new Room(type, size);
+        Room *newRoom = new Room(0, 10.f, baseIndex + i);
         newRoom->neighbours.push_back(this);
         neighbours.push_back(newRoom);
         addedRooms.push_back(newRoom);

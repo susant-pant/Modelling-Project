@@ -600,7 +600,7 @@ GLFWwindow* createWindow()
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_DECORATED, GL_TRUE);
-	GLFWwindow* window = glfwCreateWindow(mode->width, mode->height,
+	GLFWwindow* window = glfwCreateWindow(mode->width, mode->height - 20,
 		"OpenGL Template", NULL, NULL);
 	if (!window)
 	{
