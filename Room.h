@@ -19,7 +19,7 @@ public:
 vector<Room*> Room::createRooms(int type, float size, uint baseIndex, int maxNumRooms)
 {
     uint numNewRooms = uint(rand() % maxNumRooms + 1);
-    cout << "Randomly creating " << numNewRooms << " rooms at indices...";
+    cout << "Creating " << numNewRooms << " rooms at indices...";
     vector<Room*> addedRooms;
 
     for(uint i = 0; i < numNewRooms; i++)

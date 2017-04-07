@@ -42,7 +42,7 @@ void FloorGraph::addPublicRooms()
 
 void FloorGraph::addPrivateRooms(vector<Room*> publicRooms)
 {
-  int probability = 30;
+  int probability = 15;
   for(Room* room : publicRooms) {
     cout << "Now looking at Room " << room->index << endl;
 
@@ -51,7 +51,7 @@ void FloorGraph::addPrivateRooms(vector<Room*> publicRooms)
     cout << "The roll was: " << random << "/" << probability << endl;
 
     if(random <= probability)
-      concatenateRooms(room->createRooms(1, 8.f, graph.size(), 3));
+      concatenateRooms(room->createRooms(1, 8.f, graph.size(), 2));
   }
 }
 
