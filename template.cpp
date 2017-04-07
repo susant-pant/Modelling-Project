@@ -128,128 +128,128 @@ double calculateFPS(double prevTime, double currentTime);
 //**************************************************************************************\\
 //--------------------------------------------------------------------------------------\\
 
-int main(int argc, char **argv)
-{
-	/*FT_Library ft;
+// int main(int argc, char **argv)
+// {
+// 	/*FT_Library ft;
 
-	if(FT_Init_FreeType(&ft)) {
-	  fprintf(stderr, "Could not init freetype library\n");
-	  return 1;
-	}
+// 	if(FT_Init_FreeType(&ft)) {
+// 	  fprintf(stderr, "Could not init freetype library\n");
+// 	  return 1;
+// 	}
 
-	FT_Face face;
+// 	FT_Face face;
 
-	if(FT_New_Face(ft, "Fonts/OptimusPrinceps.ttf", 0, &face)) {
-	  fprintf(stderr, "Could not open font\n");
-	  return 1;
-	}
+// 	if(FT_New_Face(ft, "Fonts/OptimusPrinceps.ttf", 0, &face)) {
+// 	  fprintf(stderr, "Could not open font\n");
+// 	  return 1;
+// 	}
 
-	FT_Set_Pixel_Sizes(face, 0, 48);
+// 	FT_Set_Pixel_Sizes(face, 0, 48);
 
-	if(FT_Load_Char(face, 'X', FT_LOAD_RENDER)) {
-  	fprintf(stderr, "Could not load character 'X'\n");
-  	return 1;
-	}*/
+// 	if(FT_Load_Char(face, 'X', FT_LOAD_RENDER)) {
+//   	fprintf(stderr, "Could not load character 'X'\n");
+//   	return 1;
+// 	}*/
 
-	GLFWwindow* window = createWindow();
+// 	GLFWwindow* window = createWindow();
 
-	callBackInit(window);
+// 	callBackInit(window);
 
-	// glew initilization, this is so that the program is crossplatform,
-	// also things won't work without it
-	glewExperimental = GL_TRUE;
-	glewInit(); glGetError();
-	//An error will always be thrown when initializing glew.
-	//It can be safely discarded so we call glGetError() to delete it and move on.
+// 	// glew initilization, this is so that the program is crossplatform,
+// 	// also things won't work without it
+// 	glewExperimental = GL_TRUE;
+// 	glewInit(); glGetError();
+// 	//An error will always be thrown when initializing glew.
+// 	//It can be safely discarded so we call glGetError() to delete it and move on.
 
-//Example code, delete or modify
-//**********************************************************************************
-	vector<GLuint> programs;
-	vector<Shader> shaders;
-	vector<Geometry> shapes;
-	Geometry g;
-	shapes.push_back(g);
+// //Example code, delete or modify
+// //**********************************************************************************
+// 	vector<GLuint> programs;
+// 	vector<Shader> shaders;
+// 	vector<Geometry> shapes;
+// 	Geometry g;
+// 	shapes.push_back(g);
 
-	initDefaultShaders(shaders, argv);
-	initDefaultProgram(programs, shaders);
+// 	initDefaultShaders(shaders, argv);
+// 	initDefaultProgram(programs, shaders);
 
-	createGeometry(shapes[0]);
-//***********************************************************************************
+// 	createGeometry(shapes[0]);
+// //***********************************************************************************
 
-	Node *testNode = new Node();
-	shapes[0].vertices = testNode->getNodeCircle();
-	graph= new Graph(testNode);
+// 	Node *testNode = new Node();
+// 	shapes[0].vertices = testNode->getNodeCircle();
+// 	graph= new Graph(testNode);
 
-	for(uint i=0; i<2; i++)
-	{
-		graph->addNode(new Node());
-		graph->connect(0,graph->nodes.size()-1);
-	}
+// 	for(uint i=0; i<2; i++)
+// 	{
+// 		graph->addNode(new Node());
+// 		graph->connect(0,graph->nodes.size()-1);
+// 	}
 
-	graph->balanceNodes();
+// 	graph->balanceNodes();
 
-	//graph->nodes[0]->position = vec3(0);
+// 	//graph->nodes[0]->position = vec3(0);
 
-	int width, height;
-	glfwGetWindowSize(window, &width, &height);
-	cam = *(new Camera(mat3(1), vec3(0,-20,0), width, height));
+// 	int width, height;
+// 	glfwGetWindowSize(window, &width, &height);
+// 	cam = *(new Camera(mat3(1), vec3(0,-20,0), width, height));
 
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
-		glPointSize(10.f);
-	while (!glfwWindowShouldClose(window))
-	{
-		if(loadViewProjMatrix(cam, programs[0])!=0)
-			return 1;
+// 	glEnable(GL_DEPTH_TEST);
+// 	glDepthFunc(GL_LEQUAL);
+// 		glPointSize(10.f);
+// 	while (!glfwWindowShouldClose(window))
+// 	{
+// 		if(loadViewProjMatrix(cam, programs[0])!=0)
+// 			return 1;
 
-		glClearColor(0, 0.2f, 0.2f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+// 		glClearColor(0, 0.2f, 0.2f, 1.0f);
+// 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		vector<vec3> centers;
-		for(Node *n: graph->nodes)
-		{
-			shapes[0].vertices = n->getNodeCircle();
-			centers.push_back(n->position);
-			loadGeometryArrays(programs[0], shapes[0]);
+// 		vector<vec3> centers;
+// 		for(Node *n: graph->nodes)
+// 		{
+// 			shapes[0].vertices = n->getNodeCircle();
+// 			centers.push_back(n->position);
+// 			loadGeometryArrays(programs[0], shapes[0]);
 
-			loadColor(vec4(0,0.3,1,1), programs[0]);
-			render(programs[0], shapes[0], GL_LINE_STRIP);
-		}
+// 			loadColor(vec4(0,0.3,1,1), programs[0]);
+// 			render(programs[0], shapes[0], GL_LINE_STRIP);
+// 		}
 
-		shapes[0].vertices = centers;
-		loadColor(vec4(0,0.3,1,1), programs[0]);
-		loadGeometryArrays(programs[0], shapes[0]);
-		render(programs[0], shapes[0], GL_POINTS);
+// 		shapes[0].vertices = centers;
+// 		loadColor(vec4(0,0.3,1,1), programs[0]);
+// 		loadGeometryArrays(programs[0], shapes[0]);
+// 		render(programs[0], shapes[0], GL_POINTS);
 
-		shapes[0].indices = graph->getEdges();
-		loadColor(vec4(0,0.3,1,1), programs[0]);
-		loadGeometryArrays(programs[0], shapes[0]);
-		render(programs[0], shapes[0], GL_LINES);
+// 		shapes[0].indices = graph->getEdges();
+// 		loadColor(vec4(0,0.3,1,1), programs[0]);
+// 		loadGeometryArrays(programs[0], shapes[0]);
+// 		render(programs[0], shapes[0], GL_LINES);
 
-		shapes[0].indices.clear();
+// 		shapes[0].indices.clear();
 
-		GLenum status = openGLerror();
-		if(status!=GL_NO_ERROR)
-		{
-			cerr << "\nAn error has ocurred.\n"
-				<< "Error number: " << status << "\nTerminating!" << endl;
-			return 1;
-		}
+// 		GLenum status = openGLerror();
+// 		if(status!=GL_NO_ERROR)
+// 		{
+// 			cerr << "\nAn error has ocurred.\n"
+// 				<< "Error number: " << status << "\nTerminating!" << endl;
+// 			return 1;
+// 		}
 
-    glfwPollEvents();
-    glfwSwapBuffers(window);
-	}
-	//Cleanup
-	for(Shader s: shaders)
-		deleteShader(s);
-	for(GLuint p: programs)
-		glDeleteProgram(p);
-	for(Geometry g: shapes)
-		deleteGeometry(g);
+//     glfwPollEvents();
+//     glfwSwapBuffers(window);
+// 	}
+// 	//Cleanup
+// 	for(Shader s: shaders)
+// 		deleteShader(s);
+// 	for(GLuint p: programs)
+// 		glDeleteProgram(p);
+// 	for(Geometry g: shapes)
+// 		deleteGeometry(g);
 
-	glfwDestroyWindow(window);
-	glfwTerminate();
-}
+// 	glfwDestroyWindow(window);
+// 	glfwTerminate();
+// }
 //**************************************************************************************\\
 
 //========================================================================================

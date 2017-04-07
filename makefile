@@ -9,7 +9,7 @@ LIBS = -lglfw -lGL -lGLU -lOpenGL -lGLEW -pthread -lfreetype
 
 SRC=*.cpp
 
-$(EXEFILE): template.cpp
+$(EXEFILE): graphTest.cpp
 	g++ -std=c++11 -o $(EXEFILE) -Wall -Wno-comment $(SRC) $(IFLAGS) $(LFLAGS) $(LIBS)
 
 all: run
