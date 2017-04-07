@@ -13,20 +13,20 @@ public:
 
     Room(int _type, float _size, uint _index):type(_type), size(_size), index(_index){}
 
-    vector<Room*> createAdjacentRooms(uint baseIndex);
+    vector<Room*> createRooms(int type, float size, uint baseIndex, int maxNumRooms);
 };
 
-vector<Room*> Room::createAdjacentRooms(uint baseIndex)
+vector<Room*> Room::createRooms(int type, float size, uint baseIndex, int maxNumRooms)
 {
-    uint numNewRooms = uint(rand() % 5 + 1);
-    cout << "Creating " << numNewRooms << " adjacent rooms at indices...";
+    uint numNewRooms = uint(rand() % maxNumRooms + 1);
+    cout << "Randomly creating " << numNewRooms << " rooms at indices...";
     vector<Room*> addedRooms;
 
     for(uint i = 0; i < numNewRooms; i++)
     {
         uint indexNum = baseIndex + i;
         cout << indexNum << ", ";
-        Room *newRoom = new Room(0, 10.f, indexNum);
+        Room *newRoom = new Room(type, size, indexNum);
         newRoom->neighbours.push_back(this);
         neighbours.push_back(newRoom);
         addedRooms.push_back(newRoom);
