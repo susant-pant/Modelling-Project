@@ -1,184 +1,71 @@
-//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/*
-*	Author:	Camilo Talero
-*
-*
-*	Version:	Template
-*
-*	Implementation of the camera header. Defines the behaviour for a generic camera.
-*/
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-/*
-*	Includes and macros
-*/
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #include "Camera.h"
+#include <cstdio>
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-//========================================================================================
-/*
-*	Camera Functions:
-*/
-//========================================================================================
-
-/*
-*	Parameter constructor
-*/
-Camera::Camera(mat3 frame, vec3 pos, float w, float h)
+mat4 rotateAbout(vec3 axis, float radians)
 {
-	side = normalize(frame[0]);
-	forward = normalize(frame[1]);
-	up = normalize(frame[2]);
+	mat4 matrix;
 
-	position = pos;
-	fov = 45;
-	width = w;
-	height = h;
-	zNear = 0.01;
-	zFar = 2000;
+	matrix[0][0] = cos(radians) + axis.x*axis.x*(1-cos(radians));
+	matrix[1][0] = axis.x*axis.y*(1-cos(radians))-axis.z*sin(radians);
+	matrix[2][0] = axis.x*axis.z*(1-cos(radians)) + axis.y*sin(radians);
+
+	matrix[0][1] = axis.y*axis.x*(1-cos(radians)) + axis.z*sin(radians);
+	matrix[1][1] = cos(radians) + axis.y*axis.y*(1-cos(radians));
+	matrix[2][1] = axis.y*axis.z*(1-cos(radians)) - axis.x*sin(radians);
+
+	matrix[0][2] = axis.z*axis.x*(1-cos(radians)) - axis.y*sin(radians);
+	matrix[1][2] = axis.z*axis.y*(1-cos(radians)) + axis.x*sin(radians);
+	matrix[2][2] = cos(radians) + axis.z*axis.z*(1-cos(radians));
+
+	return matrix;
+}
+
+Camera::Camera():	dir(vec3(0, 0, -1)), 
+					right(vec3(1, 0, 0)), 
+					up(vec3(0, 1, 0)),
+					pos(vec3(0, 0, 0))
+{}
+
+Camera::Camera(vec3 _dir, vec3 _pos):dir(normalize(_dir)), pos(_pos)
+{
+	right = normalize(cross(_dir, vec3(0, 1, 0)));
+	up =  normalize(cross(right, _dir));
 }
 
 /*
-*	Default constructor
+	[ Right 0 ]
+	[ Up 	0 ]
+	[ -Dir	0 ]
+	[ 0 0 0 1 ]
 */
-Camera::Camera()
+
+mat4 Camera::getMatrix()
 {
-	side = vec3(1,0,0);
-	forward = vec3(0,1,0);
-	up = vec3(0,0,1);
-	position = vec3(0,0,0);
+	mat4 cameraRotation = mat4(
+			vec4(right, 0),
+			vec4(up, 0),
+			vec4(-dir, 0),
+			vec4(0, 0, 0, 1));
 
-	width = 1980;
-	height = 1024;
+	mat4 translation = mat4 (
+			vec4(1, 0, 0, 0),
+			vec4(0, 1, 0, 0),
+			vec4(0, 0, 1, 0),
+			vec4(-pos, 1));
 
-	fov = 45;
-	zNear = 0.01;
-	zFar = 2000;
+	return transpose(cameraRotation)*translation;
 }
 
 
-/*
-*	Destructor
-*/
-Camera::~Camera()
+void Camera::cameraRotation(float x, float y)
 {
+	mat4 rotateAroundY = rotateAbout(vec3(0, 1, 0), x);
+	mat4 rotateAroundX = rotateAbout(right, y);
 
+	dir = normalize(
+			rotateAroundX*rotateAroundY*vec4(dir, 0)
+			);
+
+	right = normalize(cross(dir, vec3(0, 1, 0)));
+	up =  normalize(cross(right, dir));
 }
-
-vec3 Camera::getPosition()
-{
-	return position;
-}
-/*
-*	Get the view matrix of the camera
-*/
-mat4 Camera::getViewMatrix()
-{
-	return lookAt(position, position+forward, up);
-}
-
-/*
-*	Get the perspective matrix of the camera
-*/
-mat4 Camera::getPerspectiveMatrix()
-{
-	return perspective(fov, width/height, zNear, zFar);
-}
-
-/*
-*	Orient the camera
-*/
-void Camera::setLookDirection(vec3 v)
-{
-	forward = normalize(v);
-	side = cross(forward, up);
-}
-
-/*
-*	Move the camera by an offset
-*/
-void Camera::move(vec3 v)
-{
-	position += v;
-}
-
-/*
-*	Place the camera at specified position
-*/
-void Camera::setPosition(vec3 p)
-{
-	position = p;
-}
-
-/*
-*	Orientation functions. Used to change the orientation of the camera around it's axis
-*/
-void Camera::turnH(float angle)
-{
-	mat4 rotation;
-	rotation = rotate(rotation, angle, up);
-	vec4 newForward = vec4(forward, 1);
-
-	newForward = rotation*newForward;
-
-	forward = vec3(newForward);
-	forward = normalize(forward);
-	side = cross(forward, up);
-}
-
-void Camera::turnV(float angle)
-{
-	mat4 rotation;
-	if(length(side)>=1)
-	{
-		rotation = rotate(rotation, angle, side);
-
-		vec4 newForward = vec4(forward, 1);
-		vec4 newUp = vec4(up, 1);
-
-		newForward = rotation*newForward;
-		newUp = rotation*newUp;
-
-		forward = vec3(newForward);
-		up = vec3(newUp);
-	}
-}
-
-void Camera::incline(float angle)
-{
-	mat4 rotation;
-	rotation = rotate(rotation, angle, forward);
-	vec4 newUp = vec4(up, 1);
-
-	newUp = rotation*newUp;
-
-	up = vec3(newUp);
-	up = normalize(up);
-	side = cross(forward, up);
-}
-
-void Camera::resetView()
-{
-	side = vec3(1,0,0);
-	forward = vec3(0,1,0);
-	up = vec3(0,0,1);
-}
-
-void Camera::resetCamera()
-{
-	side = vec3(1,0,0);
-	forward = vec3(0,1,0);
-	up = vec3(0,0,1);
-	position = vec3(0,0,0);
-
-	width = 1980;
-	height = 1024;
-
-	fov = 45;
-	zNear = 0.01;
-	zFar = 2000;
-}
-//########################################################################################

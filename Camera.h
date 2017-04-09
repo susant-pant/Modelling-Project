@@ -1,55 +1,22 @@
-//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/*
-*	Author:	Camilo Talero
-*
-*
-*	Version:	Template
-*
-*	Header declaration of functions and memebers for a generic camera class
-*/
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#ifndef CAMERA_H
+#define CAMERA_H
 
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-/*
-*	Includes and macros
-*/
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/transform.hpp>
+#include "glm/glm.hpp"
 
 using namespace glm;
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-//========================================================================================
-/*
-*	Camera Function and Members Declarations:
-*/
-//========================================================================================
-class Camera
-{
-	private:
-		vec3 forward;
-		vec3 up;
-		vec3 side;
-		vec3 position;
-		float fov, width, height, zNear, zFar;
+class Camera{
+public:
+	vec3 dir;
+	vec3 up;
+	vec3 right;
+	vec3 pos;
 
-	public:
-		Camera (mat3 frame, vec3 pos, float w, float h);
-		Camera();
-		~Camera();
-		mat4 getViewMatrix();
-		mat4 getPerspectiveMatrix();
-		void setLookDirection(vec3 v);
-		void move(vec3 v);
-		void setPosition(vec3 p);
-		void turnH(float angle);
-		void turnV(float angle);
-		void incline(float angle);
-		void resetView();
-		void resetCamera();
-		vec3 getPosition();
+	Camera();
+	Camera(vec3 _dir, vec3 _pos);
+
+	mat4 getMatrix();
+	void cameraRotation(float x, float y);
 
 };
-//########################################################################################
+#endif

@@ -1,794 +1,553 @@
-//^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/*
-*	Author:	Camilo Talero
-*
-*
-*	Version:	Template
-*
-*	References:
-*	https://open.gl
-*	http://www.opengl-tutorial.org/beginners-tutorials/tutorial-3-matrices/
-*	http://www.glfw.org/docs/latest/
-*
-*	Note: Based on the Boiler Plate written by Dr. Sonny Chan, University of Calgary,
-*		Alberta Canada.
-*/
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// ==========================================================================
+// Barebones OpenGL Core Profile Boilerplate
+//    using the GLFW windowing system (http://www.glfw.org)
+//
+// Loosely based on
+//  - Chris Wellons' example (https://github.com/skeeto/opengl-demo) and
+//  - Camilla Berglund's example (http://www.glfw.org/docs/latest/quick.html)
+//
+// Author:  Sonny Chan, University of Calgary
+// Date:    December 2015
+// ==========================================================================
 
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-/*
-*	Includes and macros
-*/
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-#define GLEW_DYNAMIC
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
 #include <iostream>
 #include <fstream>
-#include <cstdlib>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <string>
+#include <iterator>
+#include <algorithm>
 #include <vector>
-#include <unistd.h>
-#include <ft2build.h>
-#include FT_FREETYPE_H
+#include <queue>
+#include <cstdlib>
+
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+
+// specify that we want the OpenGL core profile before including GLFW headers
+#include "glad/glad.h"
+#include <GLFW/glfw3.h>
 
 #include "Camera.h"
-#include "CustomOperators.h"
-#include "Graph.h"
+
+#include "FloorGraph.h"
+
+#define PI 3.14159265359
 
 using namespace std;
 using namespace glm;
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-/*
-*	Structure definitions
-*/
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-struct Shader
-{
-	string fileName;
-	GLuint shaderID;
-	GLuint type;
-	GLuint program;
-};
+//Forward definitions
+bool CheckGLErrors(string location);
+void QueryGLVersion();
+string LoadSource(const string &filename);
+GLuint CompileShader(GLenum shaderType, const string &source);
+GLuint LinkProgram(GLuint vertexShader, GLuint fragmentShader);
 
-struct Geometry
-{
-	GLuint vertexArray;
+GLenum drawMode;
 
-	GLuint vertexBuffer;
-	GLuint elmentBuffer;
-	GLuint normalsBuffer;
-
-	vector<vec3> vertices;
-	vector<uint> indices;
-	vector<vec3> normals;
-};
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-/*
-*	Global Values
-*/
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+vec2 mousePos;
 
 Camera cam;
-Graph* graph;
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+GLFWwindow* window = 0;
 
-//========================================================================================
-/*
-*	List of function headers:
-*/
-//========================================================================================
+// --------------------------------------------------------------------------
+// GLFW callback functions
 
-void error_callback(int error, const char* description);
-void resize_callback(GLFWwindow* window, int width, int height);
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
-void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos);
-void callBackInit(GLFWwindow* window);
-void loadGeometryArrays(GLuint program, Geometry &g);
-void render(GLuint program, Geometry &g, GLenum drawType);
-void compileShader(GLuint &shader, string &filepath, GLenum shaderType);
-void initDefaultShaders(vector<Shader> &shaders, char** argv);
-void initDefaultProgram(vector<GLuint> &programs, vector<Shader> &shaders);
-void createShader(Shader &s, string file, GLenum type);
-void deleteShader(Shader &s);
-void createGeometry(Geometry &g, vector<vec3> vertices, vector<uint> indices);
-void createGeometry(Geometry &g);
-void deleteGeometry(Geometry &g);
-
-GLFWwindow* createWindow();
-
-string loadSourceFile(string &filepath);
-string mat4ToString(mat4 m);
-
-GLuint createShadingProgram(GLuint vertexShader, GLuint fragmentShader);
-int loadViewProjMatrix(Camera &c, GLuint &program);
-int loadColor(vec4 color, GLuint program);
-int loadCamera(vec3 cameraPos, GLuint program);
-int openGLerror();
-
-double calculateFPS(double prevTime, double currentTime);
-//########################################################################################
-
-//--------------------------------------------------------------------------------------\\
-//**************************************************************************************\\
-
-	/*	MAIN FUNCTION 	*/
-
-//**************************************************************************************\\
-//--------------------------------------------------------------------------------------\\
-
-int main(int argc, char **argv)
+// reports GLFW errors
+void ErrorCallback(int error, const char* description)
 {
-	/*FT_Library ft;
+	cout << "GLFW ERROR " << error << ":" << endl;
+	cout << description << endl;
+}
 
-	if(FT_Init_FreeType(&ft)) {
-	  fprintf(stderr, "Could not init freetype library\n");
-	  return 1;
+bool wPressed = false;
+bool sPressed = false;
+bool dPressed = false;
+bool aPressed = false;
+bool ePressed = false;
+bool qPressed = false;
+
+// handles keyboard input events
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
+		glfwSetWindowShouldClose(window, GL_TRUE);
 	}
 
-	FT_Face face;
+	if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_RELEASE))
+		wPressed = !wPressed;
+	else if(key == GLFW_KEY_S && (action == GLFW_PRESS || action == GLFW_RELEASE))
+		sPressed = !sPressed;
+	else if(key == GLFW_KEY_D && (action == GLFW_PRESS || action == GLFW_RELEASE))
+		dPressed = !dPressed;
+	else if(key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_RELEASE))
+		aPressed = !aPressed;
+	else if(key == GLFW_KEY_E && (action == GLFW_PRESS || action == GLFW_RELEASE))
+		ePressed = !ePressed;
+	else if(key == GLFW_KEY_Q && (action == GLFW_PRESS || action == GLFW_RELEASE))
+		qPressed = !qPressed;
+}
 
-	if(FT_New_Face(ft, "Fonts/OptimusPrinceps.ttf", 0, &face)) {
-	  fprintf(stderr, "Could not open font\n");
-	  return 1;
-	}
+bool mousePressed = false;
 
-	FT_Set_Pixel_Sizes(face, 0, 48);
+void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+{
+	if( (action == GLFW_PRESS) || (action == GLFW_RELEASE) )
+		mousePressed = !mousePressed;
+}
 
-	if(FT_Load_Char(face, 'X', FT_LOAD_RENDER)) {
-  	fprintf(stderr, "Could not load character 'X'\n");
-  	return 1;
-	}*/
+void mousePosCallback(GLFWwindow* window, double xpos, double ypos)
+{
+	int vp[4];
+	glGetIntegerv(GL_VIEWPORT, vp);
 
-	GLFWwindow* window = createWindow();
+	vec2 newPos = vec2(xpos/(double)vp[2], -ypos/(double)vp[3])*2.f - vec2(1.f);
+	vec2 diff = newPos - mousePos;
 
-	callBackInit(window);
+	if(mousePressed)
+		cam.cameraRotation(-diff.x, diff.y);
 
-	// glew initilization, this is so that the program is crossplatform,
-	// also things won't work without it
-	glewExperimental = GL_TRUE;
-	glewInit(); glGetError();
-	//An error will always be thrown when initializing glew.
-	//It can be safely discarded so we call glGetError() to delete it and move on.
+	mousePos = newPos;
+}
 
-//Example code, delete or modify
-//**********************************************************************************
-	vector<GLuint> programs;
-	vector<Shader> shaders;
-	vector<Geometry> shapes;
-	Geometry g;
-	shapes.push_back(g);
+void resizeCallback(GLFWwindow* window, int width, int height)
+{
+	glViewport(0, 0, width, height);
 
-	initDefaultShaders(shaders, argv);
-	initDefaultProgram(programs, shaders);
+}
 
-	createGeometry(shapes[0]);
-//***********************************************************************************
+//==========================================================================
+// TUTORIAL STUFF
 
-	Node *testNode = new Node();
-	shapes[0].vertices = testNode->getNodeCircle();
-	graph= new Graph(testNode);
 
-	for(uint i=0; i<2; i++)
-	{
-		graph->addNode(new Node());
-		graph->connect(0,graph->nodes.size()-1);
-	}
+//vec2 and vec3 are part of the glm math library. 
+//Include in your own project by putting the glm directory in your project, 
+//and including glm/glm.hpp as I have at the top of the file.
+//"using namespace glm;" will allow you to avoid writing everyting as glm::vec2
 
-	graph->balanceNodes();
+struct VertexBuffers{
+	enum{ VERTICES=0, COUNT};
 
-	//graph->nodes[0]->position = vec3(0);
+	GLuint id[COUNT];
+};
 
-	int width, height;
-	glfwGetWindowSize(window, &width, &height);
-	cam = *(new Camera(mat3(1), vec3(0,-20,0), width, height));
+//Describe the setup of the Vertex Array Object
+bool initVAO(GLuint vao, const VertexBuffers& vbo)
+{
+	glBindVertexArray(vao);		//Set the active Vertex Array
 
+	glEnableVertexAttribArray(0);		//Tell opengl you're using layout attribute 0 (For shader input)
+	glBindBuffer( GL_ARRAY_BUFFER, vbo.id[VertexBuffers::VERTICES] );		//Set the active Vertex Buffer
+	glVertexAttribPointer(
+		0,				//Attribute
+		4,				//Size # Components
+		GL_FLOAT,	//Type
+		GL_TRUE, 	//Normalized?
+		sizeof(vec4),	//Stride
+		(void*)0			//Offset
+		);
+
+	return !CheckGLErrors("initVAO");		//Check for errors in initialize
+}
+
+
+//Loads buffers with data
+bool loadBuffer(const VertexBuffers& vbo, const vector<vec4>& points)
+{
+	glBindBuffer(GL_ARRAY_BUFFER, vbo.id[VertexBuffers::VERTICES]);
+	glBufferData(
+		GL_ARRAY_BUFFER,				//Which buffer you're loading too
+		sizeof(vec4)*points.size(),		//Size of data in array (in bytes)
+		&points[0],						//Start of array (&points[0] will give you pointer to start of vector)
+		GL_STATIC_DRAW					//GL_DYNAMIC_DRAW if you're changing the data often
+										//GL_STATIC_DRAW if you're changing seldomly
+		);
+
+	return !CheckGLErrors("loadBuffer");	
+}
+
+//Compile and link shaders, storing the program ID in shader array
+GLuint initShader(string vertexName, string fragmentName)
+{	
+	string vertexSource = LoadSource(vertexName);		//Put vertex file text into string
+	string fragmentSource = LoadSource(fragmentName);		//Put fragment file text into string
+
+	GLuint vertexID = CompileShader(GL_VERTEX_SHADER, vertexSource);
+	GLuint fragmentID = CompileShader(GL_FRAGMENT_SHADER, fragmentSource);
+	
+	return LinkProgram(vertexID, fragmentID);	//Link and store program ID in shader array
+}
+
+//Initialization
+void initGL()
+{
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
-		glPointSize(10.f);
-	while (!glfwWindowShouldClose(window))
-	{
-		if(loadViewProjMatrix(cam, programs[0])!=0)
-			return 1;
 
-		glClearColor(0, 0.2f, 0.2f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-		vector<vec3> centers;
-		for(Node *n: graph->nodes)
-		{
-			shapes[0].vertices = n->getNodeCircle();
-			centers.push_back(n->position);
-			loadGeometryArrays(programs[0], shapes[0]);
+	glClearColor(0.f, 0.f, 0.f, 0.f);		//Color to clear the screen with (R, G, B, Alpha)
+}
 
-			loadColor(vec4(0,0.3,1,1), programs[0]);
-			render(programs[0], shapes[0], GL_LINE_STRIP);
+bool loadUniforms(Camera* cam, GLuint program, mat4 perspective, mat4 modelview)
+{
+	glUseProgram(program);
+
+	mat4 camMatrix = cam->getMatrix();
+
+	glUniformMatrix4fv(glGetUniformLocation(program, "cameraMatrix"),
+						1,
+						false,
+						&camMatrix[0][0]);
+
+	glUniformMatrix4fv(glGetUniformLocation(program, "modelviewMatrix"),
+						1,
+						false,
+						&modelview[0][0]);
+
+	glUniformMatrix4fv(glGetUniformLocation(program, "perspectiveMatrix"),
+						1,
+						false,
+						&perspective[0][0]);
+
+	return !CheckGLErrors("loadUniforms");
+}
+
+//Draws buffers to screen
+void render(GLuint vao, int startElement, int numElements)
+{
+	glBindVertexArray(vao);		//Use the LINES vertex array
+	glDrawArrays(
+			drawMode,		//What shape we're drawing	- GL_TRIANGLES, GL_LINES, GL_POINTS, GL_QUADS, GL_TRIANGLE_STRIP
+			startElement,
+			numElements		//How many indices
+			);
+
+	CheckGLErrors("render");
+}
+
+void drawRooms(vector<vec4>* vertices, vector<vec4>* lines, FloorGraph* floorGraph) {
+	vertices->clear();
+	for (Room* room : floorGraph->graph){
+		//first triangle
+		vertices->push_back(vec4(vec3(room->basePos, -10.f) + vec3(0.05f, 0.05f, 0.f), float(room->type)));
+		vertices->push_back(vec4(vec3(room->basePos, -10.f) + vec3(0.05f, -0.05f, 0.f), float(room->type)));
+		vertices->push_back(vec4(vec3(room->basePos, -10.f) + vec3(-0.05f, 0.05f, 0.f), float(room->type)));
+		//second triangle
+		vertices->push_back(vec4(vec3(room->basePos, -10.f) + vec3(0.05f, -0.05f, 0.f), float(room->type)));
+		vertices->push_back(vec4(vec3(room->basePos, -10.f) + vec3(-0.05f, -0.05f, 0.f), float(room->type)));
+		vertices->push_back(vec4(vec3(room->basePos, -10.f) + vec3(-0.05f, 0.05f, 0.f), float(room->type)));
+
+		for (Room* neib : room->neighbours) {
+			if (room->index < neib->index) {
+				lines->push_back(vec4(vec3(room->basePos, -10.f), 2.f));
+				lines->push_back(vec4(vec3(neib->basePos, -10.f), 2.f));
+			}
 		}
-
-		shapes[0].vertices = centers;
-		loadColor(vec4(0,0.3,1,1), programs[0]);
-		loadGeometryArrays(programs[0], shapes[0]);
-		render(programs[0], shapes[0], GL_POINTS);
-
-		shapes[0].indices = graph->getEdges();
-		loadColor(vec4(0,0.3,1,1), programs[0]);
-		loadGeometryArrays(programs[0], shapes[0]);
-		render(programs[0], shapes[0], GL_LINES);
-
-		shapes[0].indices.clear();
-
-		GLenum status = openGLerror();
-		if(status!=GL_NO_ERROR)
-		{
-			cerr << "\nAn error has ocurred.\n"
-				<< "Error number: " << status << "\nTerminating!" << endl;
-			return 1;
-		}
-
-    glfwPollEvents();
-    glfwSwapBuffers(window);
-	}
-	//Cleanup
-	for(Shader s: shaders)
-		deleteShader(s);
-	for(GLuint p: programs)
-		glDeleteProgram(p);
-	for(Geometry g: shapes)
-		deleteGeometry(g);
-
-	glfwDestroyWindow(window);
-	glfwTerminate();
-}
-//**************************************************************************************\\
-
-//========================================================================================
-/*
-*	Rendering Functions:
-*/
-//========================================================================================
-
-//Need more versions of this:
-void loadGeometryArrays(GLuint program, Geometry &g)
-{
-	glUseProgram(program);
-
-	glBindVertexArray(g.vertexArray);
-
-	glBindBuffer(GL_ARRAY_BUFFER, g.vertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, g.vertices.size()*sizeof(vec3),
-		g.vertices.data(), GL_DYNAMIC_DRAW);
-
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void*)0);
-
-	if(g.normals.size()>0)
-	{
-		glEnableVertexAttribArray(1);
-		glBindBuffer(GL_ARRAY_BUFFER, g.normalsBuffer);
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_TRUE, sizeof(vec3), (void*)0);
-		glBufferData(GL_ARRAY_BUFFER, g.normals.size()*sizeof(vec3),
-			g.normals.data(), GL_DYNAMIC_DRAW);
-	}
-
-	if(g.indices.size()>0)
-	{
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g.elmentBuffer);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, g.indices.size()*sizeof(uint),
-			g.indices.data(), GL_DYNAMIC_DRAW);
 	}
 }
 
-void render(GLuint program, Geometry &g, GLenum drawType)
+GLFWwindow* createGLFWWindow()
 {
-	glUseProgram(program);
-
-	glBindVertexArray(g.vertexArray);
-
-	if(g.indices.size()>0)
-		glDrawElements(drawType, g.indices.size(), GL_UNSIGNED_INT, (void*)0);
-
-	else
-		glDrawArrays(drawType, 0, g.vertices.size());
-}
-
-int loadViewProjMatrix(Camera &c, GLuint &program)
-{
-	glUseProgram(program);
-	GLint loc = glGetUniformLocation(program, "view");
-	if(loc == GL_INVALID_VALUE || loc==GL_INVALID_OPERATION)
-	{
-		cerr << "Error returned when trying to find uniform location."
-			<< "\nuniform: view"
-			<< "Error num: " << loc
-			<< endl;
-		return -1;
-	}
-	glUniformMatrix4fv(loc, 1, GL_FALSE, value_ptr(c.getViewMatrix()));
-
-	loc = glGetUniformLocation(program, "proj");
-	if(loc == GL_INVALID_VALUE || loc==GL_INVALID_OPERATION)
-	{
-
-		cerr << "Error returned when trying to find uniform location."
-			<< "\nuniform: proj"
-			<< "Error num: " << loc
-			<< endl;
-		return -1;
-	}
-	glUniformMatrix4fv(loc, 1, GL_FALSE, value_ptr(c.getPerspectiveMatrix()));
-
-	return 0;
-}
-
-int loadColor(vec4 color, GLuint program)
-{
-	glUseProgram(program);
-	GLint loc = glGetUniformLocation(program, "color");
-	if (loc == -1)
-	{
-		cerr << "Uniform: \"color\" not found." << endl;
-		return -1;
-	}
-	glUniform4f(loc, color[0], color[1], color[2], color[3]);
-
-	return 1;
-}
-
-int loadCamera(vec3 cameraPos, GLuint program)
-{
-	glUseProgram(program);
-	GLint loc = glGetUniformLocation(program, "cameraPos");
-	if (loc == -1)
-	{
-		cerr << "Uniform: \"cameraPos\" not found." << endl;
-		return -1;
-	}
-	glUniform3f(loc, cameraPos[0], cameraPos[1], cameraPos[2]);
-
-	return 1;
-}
-//########################################################################################
-
-//========================================================================================
-/*
-*	Shader Functions:
-*/
-//========================================================================================
-void createShader(Shader &s, string file, GLenum type)
-{
-	s.fileName = file;
-	compileShader(s.shaderID, file, type);
-	s.type = GL_VERTEX_SHADER;
-	s.program = 0;
-}
-
-void deleteShader(Shader &s)
-{
-	glUseProgram(0);
-	glDeleteShader(s.shaderID);
-	s.program = 0;
-}
-
-GLuint createShadingProgram(GLuint vertexShader, GLuint fragmentShader)
-{
-	GLuint shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-
-	glLinkProgram(shaderProgram);
-	glUseProgram(shaderProgram);
-
-	return shaderProgram;
-}
-
-void compileShader(GLuint &shader, string &filename, GLenum shaderType)
-{
-	string source = loadSourceFile(filename);
-	const GLchar* s_ptr = source.c_str();
-
-	shader = glCreateShader(shaderType);
-	glShaderSource(shader, 1, &s_ptr, NULL);
-
-	glCompileShader(shader);
-
-	GLint status;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-	if(status!=GL_TRUE)
-	{
-		cout << "Shader compilation error. Could not compile: "
-		<< filename << "\nShader type: "
-		<< shaderType
-		<<endl;
-
-		GLint length;
-		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
-
-		string log(length, ' ');
-		glGetShaderInfoLog(shader, log.length(), &length, &log[0]);
-
-		cerr<< endl << source <<endl;
-		cerr << endl << log <<endl;
-	}
-}
-
-string loadSourceFile(string &filepath)
-{
-	string source;
-
-	ifstream input(filepath.c_str());
-	if (input) {
-		copy(istreambuf_iterator<char>(input),
-			istreambuf_iterator<char>(),
-			back_inserter(source));
-		input.close();
-	}
-
-	else {
-		cerr << "ERROR: Could not load shader source from file: "
-			<< filepath << endl;
-	}
-
-	return source;
-}
-//########################################################################################
-
-
-//========================================================================================
-/*
-*	Geometry Functions:
-*/
-//========================================================================================
-void createGeometry(Geometry &g, vector<vec3> vertices, vector<uint> indices)
-{
-	glEnableVertexAttribArray(0);
-	glGenBuffers(1, &(g.vertexBuffer));
-	glBindBuffer(GL_ARRAY_BUFFER, g.vertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(vec3),
-		vertices.data(), GL_DYNAMIC_DRAW);
-
-	glGenBuffers(1, &(g.elmentBuffer));
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g.elmentBuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vertices.size()*sizeof(uint),
-		indices.data(), GL_DYNAMIC_DRAW);
-
-	glEnableVertexAttribArray(1);
-	glGenBuffers(1, &g.normalsBuffer);
-
-	glGenVertexArrays(1, &(g.vertexArray));
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	g.vertices=vertices;
-	g.indices=indices;
-}
-
-void createGeometry(Geometry &g)
-{
-	glEnableVertexAttribArray(0);
-	glGenBuffers(1, &(g.vertexBuffer));
-
-	glGenBuffers(1, &(g.elmentBuffer));
-
-	glEnableVertexAttribArray(1);
-	glGenBuffers(1, &g.normalsBuffer);
-
-	glGenVertexArrays(1, &(g.vertexArray));
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
-void deleteGeometry(Geometry &g)
-{
-	glBindVertexArray(0);
-	glDeleteVertexArrays(1, &(g.vertexArray));
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glDeleteBuffers(1, &(g.vertexBuffer));
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	glDeleteBuffers(1, &(g.elmentBuffer));
-}
-//########################################################################################
-
-//========================================================================================
-/*
-*	Error checking and debugging functions:
-*/
-//========================================================================================
-
-int openGLerror()
-{
-	GLenum errorNum = glGetError();
-	switch(errorNum)
-	{
-		case GL_NO_ERROR:
-			break;
-		case GL_INVALID_ENUM:
-			cerr << "An unacceptable value is specified for an enumerated argument."
-				<< endl;
-			break;
-		case GL_INVALID_VALUE:
-			cerr << "A numeric argument is out of range."
-				<< endl;
-			break;
-		case GL_INVALID_OPERATION:
-			cerr << "The specified operation is not allowed in the current state."
-				<< endl;
-			break;
-		case GL_INVALID_FRAMEBUFFER_OPERATION:
-			cerr << "The framebuffer object is not complete."
-				<< endl;
-			break;
-		case GL_OUT_OF_MEMORY:
-			cerr << "There is not enough memory left to execute the command."
-				<< endl;
-			break;
-		default:
-			cerr<< "Undefined error, you messed up big time now."
-				<< endl;
-	}
-	return errorNum;
-}
-
-/*
-*	Make a string representing the values of a mat4.
-*/
-string mat4ToString(mat4 m)
-{
-	string s = "";
-	s += "\n{";
-	for(int i=0; i<4; i++)
-	{
-		for(int j=0; j<4; j++)
-		{
-			s += to_string(m[i][j]) + ", ";
-		}
-		if(i!=3)
-			s += "\n";
-	}
-	s += "}\n";
-	return s;
-}
-
-double calculateFPS(double prevTime, double currentTime)
-{
-	double elapsedTime = currentTime - prevTime;
-	return 1/elapsedTime;
-}
-//########################################################################################
-
-//========================================================================================
-/*
-*	Initialization:
-*/
-//========================================================================================
-//Initialize GLFW callBack Functions
-void callBackInit(GLFWwindow* window)
-{
-	//Set GLFW callback functions
-	glfwSetErrorCallback(error_callback);
-	glfwSetWindowSizeCallback(window, resize_callback);
-	glfwSetKeyCallback(window, key_callback);
-	glfwSetCursorPosCallback(window, cursor_pos_callback);
-	glfwSetMouseButtonCallback(window, mouse_button_callback);
-
-}
-
-//Initialize window
-//WARNING: Not sure if this is correct, if bugs appear suspect this function!
-GLFWwindow* createWindow()
-{
-	//Initialize GLFW
-	if (!glfwInit())
-	{
-		cerr<< "Failed to initialize GLFW.\nTerminating program." << endl;
+	// initialize the GLFW windowing system
+	if (!glfwInit()) {
+		cout << "ERROR: GLFW failed to initialize, TERMINATING" << endl;
 		return NULL;
 	}
+	glfwSetErrorCallback(ErrorCallback);
 
-	const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+	// attempt to create a window with an OpenGL 4.1 core profile context
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	glfwWindowHint(GLFW_DECORATED, GL_TRUE);
-	GLFWwindow* window = glfwCreateWindow(mode->width, mode->height - 20,
-		"OpenGL Template", NULL, NULL);
-	if (!window)
-	{
-
-		cerr<< "Failed to glfwCreateWindow.\nTerminating program." << endl;
+	window = glfwCreateWindow(1024, 1024, "Da B.I.G. Modelling Projekt", 0, 0);
+	if (!window) {
+		cout << "Program failed to create GLFW window, TERMINATING" << endl;
+		glfwTerminate();
 		return NULL;
 	}
-	//glfwMaximizeWindow(window);
+
+	// set keyboard callback function and make our context current (active)
+	glfwSetKeyCallback(window, keyCallback);
+	glfwSetMouseButtonCallback(window, mouseButtonCallback);
+	glfwSetCursorPosCallback(window, mousePosCallback);
+	glfwSetWindowSizeCallback(window, resizeCallback);
 	glfwMakeContextCurrent(window);
 
 	return window;
 }
 
-/*
-*	InitDefaultProgram and InitDefaultShader are examples on how to initialize
-*	the OpenGL pipeline. It is recommended to re-implement these.
-*/
-void initDefaultProgram(vector<GLuint> &programs, vector<Shader> &shaders)
-{
-	programs.push_back(glCreateProgram());
-	glAttachShader(programs[0], shaders[0].shaderID);
-	glAttachShader(programs[0], shaders[1].shaderID);
+void initFloorGraph(FloorGraph* floorGraph) {
+	floorGraph->addPublicRooms();
+	floorGraph->addOtherRooms(15, 60, 1, 8.f, 2, floorGraph->graph);	//add Private Rooms
+	floorGraph->addOtherRooms(5, 35, 2, 2.f, 1, floorGraph->graph);		//add Extra Rooms
 
-	glLinkProgram(programs[0]);
-	glUseProgram(programs[0]);
+	queue<int> queue;
 
-	shaders[0].program=programs[0];
-	shaders[1].program=programs[0];
-}
+	Room* room = floorGraph->graph[0];
+	room->basePos = vec2(0.f, 0.f);
+	queue.push(room->index);
 
-void initDefaultShaders(vector<Shader> &shaders, char** argv)
-{
-	string str1(argv[1]);
-	Shader s1;
-	shaders.push_back(s1);
+	while (queue.size() > 0) {
+		room = floorGraph->graph[queue.front()];
+		queue.pop();
 
-	createShader(shaders[0], str1, GL_VERTEX_SHADER);
-
-	string str2(argv[2]);
-	Shader s2;
-	shaders.push_back(s2);
-
-	createShader(shaders[1], str2, GL_FRAGMENT_SHADER);
-}
-//########################################################################################
-
-//========================================================================================
-/*
-*	GLFW helper functions:
-*/
-//========================================================================================
-
-/*vec2 mapCursorToWindow(vec2 pos, GLFWwindow *window)
-{
-	double xpos, ypos;
-	glfwGetCursorPos(window, &xpos, &ypos);
-
-	int width, height;
-	glfwGetWindowSize(window, &width, &height);
-
-	pos.x = (2*xpos-width)/width;
-	pos.y = -(2*(ypos)-height)/(height);
-
-	return pos;
-}*/
-
-int cursorSelectNode(GLFWwindow *window)
-{
-	double xpos, ypos;
-	glfwGetCursorPos(window, &xpos, &ypos);
-
-	mat4 view= cam.getViewMatrix();
-	mat4 proj= cam.getPerspectiveMatrix();
-
-	uint count = 0;
-	int width, height;
-	glfwGetWindowSize(window, &width, &height);
-	vec3 screenPos;
-	for(Node *node : graph->nodes)
-	{
-		screenPos = project(node->position, view, proj, vec4(0.f,0.f,(float)width, (float)height));
-		float depth = screenPos.z;
-		vec2 v = vec2(xpos, height-ypos);
-		vec3 projCursor = unProject(vec3(v.x,v.y,depth), view, proj, vec4(0.f,0.f,(float)width, (float)height));
-
-		cout << "Center: " << screenPos << endl;
-		cout << "Cursor: " << v << endl;
-
-		if(length(projCursor-node->position) < node->size)
-			break;
-
-		count++;
+		for (Room* neib : room->neighbours) {
+			if (room->index < neib->index) {
+				neib->basePos = room->basePos + vec2(float(rand() % 101 - 50) / 10.f, float(rand() % 101 - 50) / 10.f);
+				queue.push(neib->index);
+			}
+		}
 	}
-	cout << endl;
-	if(count < graph->nodes.size())
-		return count;
-	else
+}
+
+void setRoomsPos(FloorGraph* floorGraph) {
+	vector<Room*> siblings;
+
+	for (Room* room : floorGraph->graph) {
+		room->basePos = normalize(room->basePos);
+
+		for (Room* neib : room->neighbours) {
+			if (neib->index < room->index) {
+				for (Room* sibling : neib->neighbours) {
+					if (neib->index < sibling->index)
+						siblings.push_back(sibling);
+				}
+			}
+		}
+
+		for (int i = 0; i < int(siblings.size()); i++) {
+			for (int j = i; j < int(siblings.size()); j++) {
+				vec2 dirVector = siblings[j]->basePos - siblings[i]->basePos;
+				if (length(dirVector) < 1.f) {
+					siblings[j]->basePos += 0.5f*dirVector;
+				}
+			}
+		}
+
+		for (Room* neib : room->neighbours) {
+			if (room->index < neib->index) {
+				neib->basePos = 0.5f * (neib->basePos - room->basePos) + room->basePos;
+			}
+		}
+	}
+}
+
+// ==========================================================================
+// PROGRAM ENTRY POINT
+
+int main(int argc, char *argv[]) {
+	window = createGLFWWindow();
+	if(window == NULL)
 		return -1;
-}
-//########################################################################################
 
-//========================================================================================
-/*
-*	GLFW callback functions:
-*/
-//========================================================================================
-
-void error_callback(int error, const char* description)
-{
-    cout << "Error: " << description << endl;
-}
-
-void resize_callback(GLFWwindow* window, int width, int height)
-{
-	glViewport(0, 0, width, height);
-}
-
-int selectedNode =-1;
-void cursor_pos_callback(GLFWwindow* window, double xpos, double ypos)
-{
-	int state = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
-	if (state == GLFW_PRESS && selectedNode>-1)
+	//Initialize glad
+	if (!gladLoadGL())
 	{
-		int width, height;
-		glfwGetWindowSize(window, &width, &height);
-
-		float depth = project(graph->nodes[selectedNode]->position,
-			cam.getViewMatrix(), cam.getPerspectiveMatrix(), vec4(0.f,0.f,(float)width, (float)height)).z;
-
-		graph->nodes[selectedNode]->position = unProject(vec3(xpos, height-ypos, depth),
-			cam.getViewMatrix(), cam.getPerspectiveMatrix(), vec4(0.f,0.f,(float)width, (float)height));
+		cout << "GLAD init failed" << endl;
+		return -1;
 	}
+
+	// query and print out information about our OpenGL environment
+	QueryGLVersion();
+
+	initGL();
+
+	//Initialize shader
+	GLuint program = initShader("VertexShader.glsl", "FragmentShader.glsl");
+
+	GLuint vaoRooms;
+	VertexBuffers vboRooms;
+	glGenVertexArrays(1, &vaoRooms);
+	glGenBuffers(VertexBuffers::COUNT, vboRooms.id);
+	initVAO(vaoRooms, vboRooms);
+
+	GLuint vaoNeibs;
+	VertexBuffers vboNeibs;
+	glGenVertexArrays(1, &vaoNeibs);
+	glGenBuffers(VertexBuffers::COUNT, vboNeibs.id);
+	initVAO(vaoNeibs, vboNeibs);
+
+	//Geometry information
+	vector<vec4> roomDrawInfo;
+	vector<vec4> neibDrawInfo;
+
+	srand(time(NULL));
+
+	FloorGraph floorGraph = FloorGraph();
+	initFloorGraph(&(floorGraph));
+	setRoomsPos(&(floorGraph));
+
+	cam = Camera(vec3(0, 0, -1), vec3(0, 0, 0));
+	//float fovy, float aspect, float zNear, float zFar
+	mat4 perspectiveMatrix = perspective(radians(80.f), 1.f, 0.1f, 500.f);
+
+	// run an event-triggered main loop
+	while (!glfwWindowShouldClose(window)) {
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glUseProgram(program);
+
+		drawRooms(&roomDrawInfo, &neibDrawInfo, &(floorGraph));
+		loadBuffer(vboRooms, roomDrawInfo);
+		loadBuffer(vboNeibs, neibDrawInfo);
+
+		float move = 0.05f;
+		if (wPressed) cam.pos += cam.dir*move;
+		if (sPressed) cam.pos -= cam.dir*move;
+		if (dPressed) cam.pos += cam.right*move;
+		if (aPressed) cam.pos -= cam.right*move;
+		if (ePressed) cam.pos += cam.up*move;
+		if (qPressed) cam.pos -= cam.up*move;
+
+		loadUniforms(&cam, program, perspectiveMatrix, mat4(1.f));
+
+		// call function to draw our scene
+		drawMode = GL_TRIANGLES;
+		render(vaoRooms, 0, roomDrawInfo.size());
+		drawMode = GL_LINES;
+		render(vaoNeibs, 0, neibDrawInfo.size());
+
+		// scene is rendered to the back buffer, so swap to front for display
+		glfwSwapBuffers(window);
+		// sleep until next event before drawing again
+		glfwPollEvents();
+	}
+
+	// clean up allocated resources before exit
+	glDeleteVertexArrays(1, &vaoRooms);
+	glDeleteBuffers(VertexBuffers::COUNT, vboRooms.id);
+	glDeleteVertexArrays(1, &vaoNeibs);
+	glDeleteBuffers(VertexBuffers::COUNT, vboNeibs.id);
+	glDeleteProgram(program);
+
+	glfwDestroyWindow(window);
+	glfwTerminate();
+
+   return 0;
 }
 
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+// ==========================================================================
+// SUPPORT FUNCTION DEFINITIONS
+
+// --------------------------------------------------------------------------
+// OpenGL utility functions
+
+void QueryGLVersion()
 {
-	selectedNode = cursorSelectNode(window);
+	// query opengl version and renderer information
+	string version  = reinterpret_cast<const char *>(glGetString(GL_VERSION));
+	string glslver  = reinterpret_cast<const char *>(glGetString(GL_SHADING_LANGUAGE_VERSION));
+	string renderer = reinterpret_cast<const char *>(glGetString(GL_RENDERER));
+
+	cout << "OpenGL [ " << version << " ] "
+		 << "with GLSL [ " << glslver << " ] "
+		 << "on renderer [ " << renderer << " ]" << endl;
 }
 
-#define CAM_SPEED 0.5f
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+bool CheckGLErrors(string location)
 {
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, GL_TRUE);
-
-    else if(key == GLFW_KEY_F12 && action == GLFW_PRESS)
-    	cout << glfwGetVersionString() << endl;
-
-    else if(key == GLFW_KEY_W)
-    	cam.move(vec3(0,CAM_SPEED,0));
-
-    else if(key == GLFW_KEY_S)
-    	cam.move(vec3(0,-CAM_SPEED,0));
-
-    else if(key == GLFW_KEY_A)
-    	cam.move(vec3(-CAM_SPEED,0,0));
-
-    else if(key == GLFW_KEY_D)
-    	cam.move(vec3(CAM_SPEED,0,0));
-
-    else if(key == GLFW_KEY_Q)
-    	cam.move(vec3(0,0,-CAM_SPEED));
-
-    else if(key == GLFW_KEY_E)
-    	cam.move(vec3(0,0, CAM_SPEED));
-
-    else if(key == GLFW_KEY_KP_6)
-    	cam.turnH(radians(-1.f));
-
-    else if(key == GLFW_KEY_KP_4)
-    	cam.turnH(radians(1.f));
-
-    else if(key == GLFW_KEY_KP_8)
-    	cam.turnV(radians(1.f));
-
-    else if(key == GLFW_KEY_KP_2)
-    	cam.turnV(radians(-1.f));
-
-    else if(key == GLFW_KEY_KP_ADD)
-    	cam.incline(radians(1.f));
-
-    else if(key == GLFW_KEY_KP_SUBTRACT)
-    	cam.incline(radians(-1.f));
-
-    else if(key == GLFW_KEY_KP_MULTIPLY)
-    	cam.resetView();
-
-    else if(key == GLFW_KEY_KP_DIVIDE)
-    	cam.resetCamera();
+	bool error = false;
+	for (GLenum flag = glGetError(); flag != GL_NO_ERROR; flag = glGetError())
+	{
+		cout << "OpenGL ERROR:  ";
+		switch (flag) {
+		case GL_INVALID_ENUM:
+			cout << location << ": " << "GL_INVALID_ENUM" << endl; break;
+		case GL_INVALID_VALUE:
+			cout << location << ": " << "GL_INVALID_VALUE" << endl; break;
+		case GL_INVALID_OPERATION:
+			cout << location << ": " << "GL_INVALID_OPERATION" << endl; break;
+		case GL_INVALID_FRAMEBUFFER_OPERATION:
+			cout << location << ": " << "GL_INVALID_FRAMEBUFFER_OPERATION" << endl; break;
+		case GL_OUT_OF_MEMORY:
+			cout << location << ": " << "GL_OUT_OF_MEMORY" << endl; break;
+		default:
+			cout << "[unknown error code]" << endl;
+		}
+		error = true;
+	}
+	return error;
 }
-//########################################################################################
+
+// --------------------------------------------------------------------------
+// OpenGL shader support functions
+
+// reads a text file with the given name into a string
+string LoadSource(const string &filename)
+{
+	string source;
+
+	ifstream input(filename.c_str());
+	if (input) {
+		copy(istreambuf_iterator<char>(input),
+			 istreambuf_iterator<char>(),
+			 back_inserter(source));
+		input.close();
+	}
+	else {
+		cout << "ERROR: Could not load shader source from file " << filename << endl;
+	}
+
+	return source;
+}
+
+// creates and returns a shader object compiled from the given source
+GLuint CompileShader(GLenum shaderType, const string &source)
+{
+	// allocate shader object name
+	GLuint shaderObject = glCreateShader(shaderType);
+
+	// try compiling the source as a shader of the given type
+	const GLchar *source_ptr = source.c_str();
+	glShaderSource(shaderObject, 1, &source_ptr, 0);
+	glCompileShader(shaderObject);
+
+	// retrieve compile status
+	GLint status;
+	glGetShaderiv(shaderObject, GL_COMPILE_STATUS, &status);
+	if (status == GL_FALSE)
+	{
+		GLint length;
+		glGetShaderiv(shaderObject, GL_INFO_LOG_LENGTH, &length);
+		string info(length, ' ');
+		glGetShaderInfoLog(shaderObject, info.length(), &length, &info[0]);
+		cout << "ERROR compiling shader:" << endl;
+		cout << source << endl;
+		cout << info << endl;
+	}
+
+	return shaderObject;
+}
+
+// creates and returns a program object linked from vertex and fragment shaders
+GLuint LinkProgram(GLuint vertexShader, GLuint fragmentShader)
+{
+	// allocate program object name
+	GLuint programObject = glCreateProgram();
+
+	// attach provided shader objects to this program
+	if (vertexShader)   glAttachShader(programObject, vertexShader);
+	if (fragmentShader) glAttachShader(programObject, fragmentShader);
+
+	// try linking the program with given attachments
+	glLinkProgram(programObject);
+
+	// retrieve link status
+	GLint status;
+	glGetProgramiv(programObject, GL_LINK_STATUS, &status);
+	if (status == GL_FALSE)
+	{
+		GLint length;
+		glGetProgramiv(programObject, GL_INFO_LOG_LENGTH, &length);
+		string info(length, ' ');
+		glGetProgramInfoLog(programObject, info.length(), &length, &info[0]);
+		cout << "ERROR linking shader program:" << endl;
+		cout << info << endl;
+	}
+
+	return programObject;
+}
+
+
+// ==========================================================================

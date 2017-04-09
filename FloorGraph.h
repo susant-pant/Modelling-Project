@@ -12,13 +12,13 @@ public:
   FloorGraph(){}
 
   void addPublicRooms();
-  void addPrivateRooms(vector<Room*> publicRooms);
-  void addExtraRooms(vector<Room*> mainRooms);
+  void addOtherRooms( int probability, int randomness,
+                      int type, float size, int numRooms,
+                      vector<Room*> extantRooms);
   void concatenateRooms(vector <Room*> newRooms);
 };
 
-void FloorGraph::addPublicRooms()
-{
+void FloorGraph::addPublicRooms() {
   graph.push_back(new Room(0, 10.f, 0));
 
   uint count = 0;
@@ -26,13 +26,14 @@ void FloorGraph::addPublicRooms()
   int probability = 10;
   while(count <= graph.size() - 1)
   {
-    cout << "Now looking at Room " << count << endl;
+    if (count > 6)
+      break;  //prevents a house having a million rooms
+
+    cout << count << endl;
 
     int random = rand() % 25;
 
-    cout << "The roll was: " << random << "/" << probability << endl;
-
-    if(random <= probability)
+    if(random <= probability || count < 1)
       concatenateRooms(currentRoom->createRooms(0, 10.f, graph.size(), 5));
 
     count++;
@@ -40,33 +41,15 @@ void FloorGraph::addPublicRooms()
   }
 }
 
-void FloorGraph::addPrivateRooms(vector<Room*> publicRooms)
+void FloorGraph::addOtherRooms( int probability, int randomness,
+                                  int type, float size, int numRooms,
+                                  vector<Room*> extantRooms)
 {
-  int probability = 15;
-  for(Room* room : publicRooms) {
-    cout << "Now looking at Room " << room->index << endl;
-
-    int random = rand() % 60;
-
-    cout << "The roll was: " << random << "/" << probability << endl;
+  for(Room* room : extantRooms) {
+    int random = rand() % randomness;
 
     if(random <= probability)
-      concatenateRooms(room->createRooms(1, 8.f, graph.size(), 2));
-  }
-}
-
-void FloorGraph::addExtraRooms(vector<Room*> mainRooms)
-{
-  int probability = 5;
-  for(Room* room : mainRooms) {
-    cout << "Now looking at Room " << room->index << endl;
-
-    int random = rand() % 35;
-
-    cout << "The roll was: " << random << "/" << probability << endl;
-
-    if(random <= probability)
-      concatenateRooms(room->createRooms(2, 2.5f, graph.size(), 1));
+      concatenateRooms(room->createRooms(type, size, graph.size(), numRooms));
   }
 }
 
