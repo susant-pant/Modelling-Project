@@ -237,8 +237,10 @@ void render(GLuint vao, int startElement, int numElements)
 	CheckGLErrors("render");
 }
 
-void drawRooms(vector<vec4>* vertices, vector<vec4>* lines, FloorGraph* floorGraph) {
+void drawRooms(vector<vec4>* vertices, vector<vec4>* lines, vector<vec4>* outlines, FloorGraph* floorGraph) {
 	vertices->clear();
+	lines->clear();
+	outlines->clear();
 	for (Room* room : floorGraph->graph){
 		//first triangle
 		vertices->push_back(vec4(vec3(room->basePos, -10.f) + vec3(0.05f, 0.05f, 0.f), float(room->type)));
@@ -255,6 +257,18 @@ void drawRooms(vector<vec4>* vertices, vector<vec4>* lines, FloorGraph* floorGra
 				lines->push_back(vec4(vec3(neib->basePos, -10.f), 2.f));
 			}
 		}
+
+		outlines->push_back(vec4(room->upRightPos, -10.f, float(room->type)));
+		outlines->push_back(vec4(room->upRightPos.x, room->downLeftPos.y, -10.f, float(room->type)));
+
+		outlines->push_back(vec4(room->upRightPos.x, room->downLeftPos.y, -10.f, float(room->type)));
+		outlines->push_back(vec4(room->downLeftPos, -10.f, float(room->type)));
+
+		outlines->push_back(vec4(room->downLeftPos, -10.f, float(room->type)));
+		outlines->push_back(vec4(room->downLeftPos.x, room->upRightPos.y, -10.f, float(room->type)));
+
+		outlines->push_back(vec4(room->downLeftPos.x, room->upRightPos.y, -10.f, float(room->type)));
+		outlines->push_back(vec4(room->upRightPos, -10.f, float(room->type)));
 	}
 }
 
@@ -298,9 +312,11 @@ void initFloorGraph(FloorGraph* floorGraph) {
 
 	Room* room = floorGraph->graph[0];
 	room->basePos = vec2(0.f, 0.f);
+	room->upRightPos = room->basePos;
+	room->downLeftPos = room->basePos;
+	room->upRightExpand = vec2(0.005f, 0.005f);
+	room->downLeftExpand = vec2(0.005f, 0.005f);
 	queue.push(room->index);
-
-	cout << "To summarize:" << endl;
 
 	while (queue.size() > 0) {
 		room = floorGraph->graph[queue.front()];
@@ -314,7 +330,9 @@ void initFloorGraph(FloorGraph* floorGraph) {
 		for (Room* neib : room->neighbours) {
 			cout << neib->index << ", ";
 			if (room->index < neib->index) {
-				neib->basePos = room->basePos + vec2(float(rand() % 101 - 50) / 50.f, float(rand() % 101 - 50) / 50.f);
+				neib->basePos = vec2(float(rand() % 101 - 50) / 50.f, float(rand() % 101 - 50) / 50.f);
+				neib->upRightExpand = vec2(0.005f, 0.005f);
+				neib->downLeftExpand = vec2(0.005f, 0.005f);
 				queue.push(neib->index);
 			}
 		}
@@ -322,7 +340,7 @@ void initFloorGraph(FloorGraph* floorGraph) {
 		if (room->index == 0) {
 			cout << "and that's it." << endl;
 		} else {
-			cout << "and its parent is Room " << room->parent->index << endl;
+			cout << "and its parent is Room " << room->parent->index << "." << endl;
 		}
 	}
 }
@@ -378,10 +396,50 @@ void setRoomsPos(FloorGraph* floorGraph) {
 		}
 
 		room->basePos = ((float(room->size) / float(papa->size)) * (room->basePos - papa->basePos)) + papa->basePos;
+		room->upRightPos = room->basePos;
+		room->downLeftPos = room->basePos;
 
 		for (Room* neib : room->neighbours) {
 			if (room->index < neib->index) {
 				queue.push(neib->index);
+			}
+		}
+	}
+}
+
+void expandRooms(FloorGraph* floorGraph) {
+	for (Room* room1 : floorGraph->graph) {
+		if (room1->area() < room1->size) {
+			room1->upRightPos += room1->upRightExpand;
+			room1->downLeftPos -= room1->downLeftExpand;
+		}
+
+		for (Room* room2 : floorGraph->graph) {
+			if (room1 == room2) continue;
+
+			if ((room1->basePos.x < room2->basePos.x) && (room1->basePos.y < room2->basePos.y)) {
+				if ((room1->upRightPos.x > room2->downLeftPos.x) && (room1->upRightPos.y > room2->downLeftPos.y)) {
+					if (room1->upRightPos.x > room2->downLeftPos.x + 0.01f) {
+						room1->upRightExpand.y = 0.f;
+						room2->downLeftExpand.y = 0.f;
+					}
+					if (room1->upRightPos.y > room2->downLeftPos.y + 0.01f) {
+						room1->upRightExpand.x = 0.f;
+						room2->downLeftExpand.x = 0.f;
+					}
+				}
+			}
+			else if ((room1->basePos.x < room2->basePos.x) && (room1->basePos.y > room2->basePos.y)) {
+				if ((room1->upRightPos.x > room2->downLeftPos.x) && (room1->downLeftPos.y < room2->upRightPos.y)) {
+					if (room1->upRightPos.x > room2->downLeftPos.x + 0.01f) {
+						room1->downLeftExpand.y = 0.f;
+						room2->upRightExpand.y = 0.f;
+					}
+					if (room1->downLeftPos.y < room2->upRightPos.y - 0.01f) {
+						room1->upRightExpand.x = 0.f;
+						room2->downLeftExpand.x = 0.f;
+					}
+				}
 			}
 		}
 	}
@@ -422,9 +480,16 @@ int main(int argc, char *argv[]) {
 	glGenBuffers(VertexBuffers::COUNT, vboNeibs.id);
 	initVAO(vaoNeibs, vboNeibs);
 
+	GLuint vaoRoomOutlines;
+	VertexBuffers vboRoomOutlines;
+	glGenVertexArrays(1, &vaoRoomOutlines);
+	glGenBuffers(VertexBuffers::COUNT, vboRoomOutlines.id);
+	initVAO(vaoRoomOutlines, vboRoomOutlines);
+
 	//Geometry information
 	vector<vec4> roomDrawInfo;
 	vector<vec4> neibDrawInfo;
+	vector<vec4> roomOutlineDrawInfo;
 
 	srand(time(NULL));
 
@@ -441,9 +506,12 @@ int main(int argc, char *argv[]) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUseProgram(program);
 
-		drawRooms(&roomDrawInfo, &neibDrawInfo, &floorGraph);
+		expandRooms(&(floorGraph));
+
+		drawRooms(&roomDrawInfo, &neibDrawInfo, &roomOutlineDrawInfo, &floorGraph);
 		loadBuffer(vboRooms, roomDrawInfo);
 		loadBuffer(vboNeibs, neibDrawInfo);
+		loadBuffer(vboRoomOutlines, roomOutlineDrawInfo);
 
 		float move = 0.05f;
 		if (ePressed) cam.pos += cam.dir*move;
@@ -460,6 +528,8 @@ int main(int argc, char *argv[]) {
 		render(vaoRooms, 0, roomDrawInfo.size());
 		drawMode = GL_LINES;
 		render(vaoNeibs, 0, neibDrawInfo.size());
+		drawMode = GL_LINES;
+		render(vaoRoomOutlines, 0, roomOutlineDrawInfo.size());
 
 		// scene is rendered to the back buffer, so swap to front for display
 		glfwSwapBuffers(window);
@@ -472,6 +542,8 @@ int main(int argc, char *argv[]) {
 	glDeleteBuffers(VertexBuffers::COUNT, vboRooms.id);
 	glDeleteVertexArrays(1, &vaoNeibs);
 	glDeleteBuffers(VertexBuffers::COUNT, vboNeibs.id);
+	glDeleteVertexArrays(1, &vaoRoomOutlines);
+	glDeleteBuffers(VertexBuffers::COUNT, vboRoomOutlines.id);
 	glDeleteProgram(program);
 
 	glfwDestroyWindow(window);

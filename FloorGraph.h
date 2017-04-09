@@ -32,12 +32,7 @@ void FloorGraph::addPublicRooms() {
     if (graph.size() > 5)
       break;  //prevents a house having a million rooms
 
-    cout << "Now looking at Room " << count << endl;
-
     int random = rand() % 25;
-
-    cout << "The roll was: " << random << "/" << probability << endl;
-
     if(random <= probability || count < 1)
       concatenateRooms(currentRoom->createRooms(0, 10.f, graph.size(), numNewRooms));
 
@@ -54,16 +49,10 @@ void FloorGraph::addOtherRooms( int probability, int randomness,
                                   vector<Room*> extantRooms)
 {
   for(Room* room : extantRooms) {
-    cout << "Now looking at Room " << room->index << endl;
-
     int random = rand() % randomness;
-
-    cout << "The roll was: " << random << "/" << probability << endl;
-
     if(random <= probability)
       concatenateRooms(room->createRooms(type, size, graph.size(), numRooms));
   }
-  cout << endl;
 }
 
 void FloorGraph::concatenateRooms(vector<Room*> newRooms)
