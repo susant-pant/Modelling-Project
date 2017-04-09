@@ -10,6 +10,7 @@ public:
     float size;
     uint index;
     vector<Room*> neighbours;
+    Room* parent;
 
     Room(int _type, float _size, uint _index):type(_type), size(_size), index(_index){}
 
@@ -28,6 +29,7 @@ vector<Room*> Room::createRooms(int type, float size, uint baseIndex, int maxNum
         cout << indexNum << ", ";
         Room *newRoom = new Room(type, size, indexNum);
         newRoom->neighbours.push_back(this);
+        newRoom->parent = this;
         neighbours.push_back(newRoom);
         addedRooms.push_back(newRoom);
     }
