@@ -11,32 +11,68 @@ public:
 
   FloorGraph(){}
 
-  void createPublicRooms();
+  void addPublicRooms();
+  void addPrivateRooms(vector<Room*> publicRooms);
+  void addExtraRooms(vector<Room*> mainRooms);
   void concatenateRooms(vector <Room*> newRooms);
 };
 
-void FloorGraph::createPublicRooms()
+void FloorGraph::addPublicRooms()
 {
   graph.push_back(new Room(0, 10.f, 0));
-  Room *currentRoom = graph[0];
 
   uint count = 0;
+  Room *currentRoom = graph[count];
   int probability = 10;
-  while(count <= graph.size() - 1) {
-    int random = (rand() % 25);
+  while(count <= graph.size() - 1)
+  {
+    cout << "Now looking at Room " << count << endl;
 
-    if(random <= probability) {
-      concatenateRooms(currentRoom->createAdjacentRooms(graph.size()));
-    }
+    int random = rand() % 25;
+
+    cout << "The roll was: " << random << "/" << probability << endl;
+
+    if(random <= probability)
+      concatenateRooms(currentRoom->createRooms(0, 10.f, graph.size(), 5));
 
     count++;
     currentRoom = graph[count];
   }
 }
 
+void FloorGraph::addPrivateRooms(vector<Room*> publicRooms)
+{
+  int probability = 15;
+  for(Room* room : publicRooms) {
+    cout << "Now looking at Room " << room->index << endl;
+
+    int random = rand() % 60;
+
+    cout << "The roll was: " << random << "/" << probability << endl;
+
+    if(random <= probability)
+      concatenateRooms(room->createRooms(1, 8.f, graph.size(), 2));
+  }
+}
+
+void FloorGraph::addExtraRooms(vector<Room*> mainRooms)
+{
+  int probability = 5;
+  for(Room* room : mainRooms) {
+    cout << "Now looking at Room " << room->index << endl;
+
+    int random = rand() % 35;
+
+    cout << "The roll was: " << random << "/" << probability << endl;
+
+    if(random <= probability)
+      concatenateRooms(room->createRooms(2, 2.5f, graph.size(), 1));
+  }
+}
+
 void FloorGraph::concatenateRooms(vector<Room*> newRooms)
 {
-  for(uint i = 0; i < newRooms.size(); i++){
-    graph.push_back(newRooms[i]);
+  for(Room* room : newRooms) {
+    graph.push_back(room);
   }
 }
