@@ -116,14 +116,7 @@ void resizeCallback(GLFWwindow* window, int width, int height)
 
 }
 
-//==========================================================================
-// TUTORIAL STUFF
-
-
-//vec2 and vec3 are part of the glm math library. 
-//Include in your own project by putting the glm directory in your project, 
-//and including glm/glm.hpp as I have at the top of the file.
-//"using namespace glm;" will allow you to avoid writing everyting as glm::vec2
+/////////////////////////////////////////////////////////////////////////////////////
 
 struct VertexBuffers{
 	enum{ VERTICES=0, COUNT};
