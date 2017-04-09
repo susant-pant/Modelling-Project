@@ -67,25 +67,43 @@ bool aPressed = false;
 bool ePressed = false;
 bool qPressed = false;
 
+int scene = 1;
+
 // handles keyboard input events
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
 		glfwSetWindowShouldClose(window, GL_TRUE);
 	}
+	
+	if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
+		scene = 1;
+	}
+	else if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
+		scene = 2;
+	}
+	else if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
+		scene = 3;
+	}
 
-	if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_RELEASE))
+	if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_RELEASE)) {
 		wPressed = !wPressed;
-	else if(key == GLFW_KEY_S && (action == GLFW_PRESS || action == GLFW_RELEASE))
+	}
+	else if(key == GLFW_KEY_S && (action == GLFW_PRESS || action == GLFW_RELEASE)) {
 		sPressed = !sPressed;
-	else if(key == GLFW_KEY_D && (action == GLFW_PRESS || action == GLFW_RELEASE))
+	}
+	else if(key == GLFW_KEY_D && (action == GLFW_PRESS || action == GLFW_RELEASE)) {
 		dPressed = !dPressed;
-	else if(key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_RELEASE))
+	}
+	else if(key == GLFW_KEY_A && (action == GLFW_PRESS || action == GLFW_RELEASE)) {
 		aPressed = !aPressed;
-	else if(key == GLFW_KEY_E && (action == GLFW_PRESS || action == GLFW_RELEASE))
+	}
+	else if(key == GLFW_KEY_E && (action == GLFW_PRESS || action == GLFW_RELEASE)) {
 		ePressed = !ePressed;
-	else if(key == GLFW_KEY_Q && (action == GLFW_PRESS || action == GLFW_RELEASE))
+	}
+	else if(key == GLFW_KEY_Q && (action == GLFW_PRESS || action == GLFW_RELEASE)) {
 		qPressed = !qPressed;
+	}
 }
 
 bool mousePressed = false;
@@ -273,7 +291,7 @@ GLFWwindow* createGLFWWindow()
 
 void initFloorGraph(FloorGraph* floorGraph) {
 	floorGraph->addPublicRooms();
-	floorGraph->addOtherRooms(15, 60, 1, 8.f, 2, floorGraph->graph);	//add Private Rooms
+	floorGraph->addOtherRooms(15, 60, 1, 5.f, 2, floorGraph->graph);	//add Private Rooms
 	floorGraph->addOtherRooms(5, 35, 2, 2.f, 1, floorGraph->graph);		//add Extra Rooms
 
 	queue<int> queue;
@@ -282,46 +300,88 @@ void initFloorGraph(FloorGraph* floorGraph) {
 	room->basePos = vec2(0.f, 0.f);
 	queue.push(room->index);
 
+	cout << "To summarize:" << endl;
+
 	while (queue.size() > 0) {
 		room = floorGraph->graph[queue.front()];
 		queue.pop();
 
+		cout << "Room " << room->index <<
+				" of type " << room->type <<
+				" and size " << room->size <<
+				" has neighbours: ";
+
 		for (Room* neib : room->neighbours) {
+			cout << neib->index << ", ";
 			if (room->index < neib->index) {
-				neib->basePos = room->basePos + vec2(float(rand() % 101 - 50) / 10.f, float(rand() % 101 - 50) / 10.f);
+				neib->basePos = room->basePos + vec2(float(rand() % 101 - 50) / 50.f, float(rand() % 101 - 50) / 50.f);
 				queue.push(neib->index);
 			}
+		}
+
+		if (room->index == 0) {
+			cout << "and that's it." << endl;
+		} else {
+			cout << "and its parent is Room " << room->parent->index << endl;
 		}
 	}
 }
 
 void setRoomsPos(FloorGraph* floorGraph) {
+	queue<int> queue;
+
+	Room* room = floorGraph->graph[0];
+	for (Room* neib : room->neighbours) {
+		queue.push(neib->index);
+	}
+
 	vector<Room*> siblings;
+	Room* papa = room;
 
-	for (Room* room : floorGraph->graph) {
-		room->basePos = normalize(room->basePos);
+	while (queue.size() > 0) {
+		room = floorGraph->graph[queue.front()];
+		queue.pop();
 
-		for (Room* neib : room->neighbours) {
-			if (neib->index < room->index) {
-				for (Room* sibling : neib->neighbours) {
-					if (neib->index < sibling->index)
-						siblings.push_back(sibling);
+		if (papa->index != room->parent->index) {
+			siblings.clear();
+
+			for (Room* sibling : papa->neighbours) {
+				if (papa->index < sibling->index) {
+					siblings.push_back(sibling);
 				}
 			}
-		}
 
-		for (int i = 0; i < int(siblings.size()); i++) {
-			for (int j = i; j < int(siblings.size()); j++) {
-				vec2 dirVector = siblings[j]->basePos - siblings[i]->basePos;
-				if (length(dirVector) < 1.f) {
-					siblings[j]->basePos += 0.5f*dirVector;
+			for (int i = 0; i < int(siblings.size()); i++) {
+				for (int j = 0; j < int(siblings.size()); j++) {
+					if (i == j) continue;
+					vec2 dispVector = siblings[i]->basePos - siblings[j]->basePos;
+					siblings[i]->basePos = dispVector + siblings[j]->basePos;
 				}
 			}
+
+			papa = room->parent;
 		}
+
+		if (papa->index != 0) {
+			vec2 papaDirectionVector = papa->parent->basePos - papa->basePos;
+			vec2 thisDirectionVector = room->basePos - papa->basePos;
+			float numer = dot(papaDirectionVector, thisDirectionVector);
+			float denom = length(papaDirectionVector) * length(thisDirectionVector);
+			float angle = acos(numer / denom) * (180.f / PI);
+			if (angle < 90.f) {
+				room->basePos = 3.f * glm::normalize(-1.f *  thisDirectionVector) + papa->basePos;
+			} else {
+				room->basePos = 3.f * glm::normalize(thisDirectionVector) + papa->basePos;
+			}
+		} else {
+			room->basePos = 3.f * glm::normalize(room->basePos);
+		}
+
+		room->basePos = ((float(room->size) / float(papa->size)) * (room->basePos - papa->basePos)) + papa->basePos;
 
 		for (Room* neib : room->neighbours) {
 			if (room->index < neib->index) {
-				neib->basePos = 0.5f * (neib->basePos - room->basePos) + room->basePos;
+				queue.push(neib->index);
 			}
 		}
 	}
@@ -372,7 +432,7 @@ int main(int argc, char *argv[]) {
 	initFloorGraph(&(floorGraph));
 	setRoomsPos(&(floorGraph));
 
-	cam = Camera(vec3(0, 0, -1), vec3(0, 0, 0));
+	cam = Camera(vec3(0, 0, -100), vec3(0, 0, 0));
 	//float fovy, float aspect, float zNear, float zFar
 	mat4 perspectiveMatrix = perspective(radians(80.f), 1.f, 0.1f, 500.f);
 
@@ -381,17 +441,17 @@ int main(int argc, char *argv[]) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUseProgram(program);
 
-		drawRooms(&roomDrawInfo, &neibDrawInfo, &(floorGraph));
+		drawRooms(&roomDrawInfo, &neibDrawInfo, &floorGraph);
 		loadBuffer(vboRooms, roomDrawInfo);
 		loadBuffer(vboNeibs, neibDrawInfo);
 
 		float move = 0.05f;
-		if (wPressed) cam.pos += cam.dir*move;
-		if (sPressed) cam.pos -= cam.dir*move;
+		if (ePressed) cam.pos += cam.dir*move;
+		if (qPressed) cam.pos -= cam.dir*move;
 		if (dPressed) cam.pos += cam.right*move;
 		if (aPressed) cam.pos -= cam.right*move;
-		if (ePressed) cam.pos += cam.up*move;
-		if (qPressed) cam.pos -= cam.up*move;
+		if (wPressed) cam.pos += cam.up*move;
+		if (sPressed) cam.pos -= cam.up*move;
 
 		loadUniforms(&cam, program, perspectiveMatrix, mat4(1.f));
 

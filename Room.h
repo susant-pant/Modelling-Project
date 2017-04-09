@@ -9,7 +9,7 @@ class Room
 public:
     int type;   //public = 0, private = 1, extra = 2
     float size;
-    uint index;
+    int index;
     vector<Room*> neighbours;
     Room* parent;
 
@@ -20,25 +20,30 @@ public:
     vec2 upRightExpand;
     vec2 downLeftExpand;
 
-    Room(int _type, float _size, uint _index):type(_type), size(_size), index(_index){}
+    Room(int _type, float _size, int _index):type(_type), size(_size), index(_index){}
 
-    vector<Room*> createRooms(int type, float size, uint baseIndex, int maxNumRooms);
+    vector<Room*> createRooms(int type, float size, int baseIndex, int maxNumRooms);
     float roomArea();
 };
 
-vector<Room*> Room::createRooms(int type, float size, uint baseIndex, int maxNumRooms)
+vector<Room*> Room::createRooms(int type, float size, int baseIndex, int maxNumRooms)
 {
-    uint numNewRooms = uint(rand() % maxNumRooms + 1);
+    int numNewRooms = rand() % maxNumRooms + 1;
+
+    cout << "Creating " << numNewRooms << " rooms at indices...";
+    
     vector<Room*> addedRooms;
 
-    for(uint i = 0; i < numNewRooms; i++)
+    for(int i = 0; i < numNewRooms; i++)
     {
+        cout << baseIndex + i << ", ";
         Room *newRoom = new Room(type, size, baseIndex + i);
         newRoom->neighbours.push_back(this);
         newRoom->parent = this;
         neighbours.push_back(newRoom);
         addedRooms.push_back(newRoom);
     }
+    cout << "and that's it." << endl;
     return addedRooms;
 }
 
