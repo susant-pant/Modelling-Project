@@ -243,32 +243,32 @@ void drawRooms(vector<vec4>* vertices, vector<vec4>* lines, vector<vec4>* outlin
 	outlines->clear();
 	for (Room* room : floorGraph->graph){
 		//first triangle
-		vertices->push_back(vec4(vec3(room->basePos, -10.f) + vec3(0.05f, 0.05f, 0.f), float(room->type)));
-		vertices->push_back(vec4(vec3(room->basePos, -10.f) + vec3(0.05f, -0.05f, 0.f), float(room->type)));
-		vertices->push_back(vec4(vec3(room->basePos, -10.f) + vec3(-0.05f, 0.05f, 0.f), float(room->type)));
+		vertices->push_back(vec4(vec3(room->basePos.x, -10.f, room->basePos.y) + vec3(0.05f, 0.f, 0.05f), float(room->type)));
+		vertices->push_back(vec4(vec3(room->basePos.x, -10.f, room->basePos.y) + vec3(0.05f, 0.f, -0.05f), float(room->type)));
+		vertices->push_back(vec4(vec3(room->basePos.x, -10.f, room->basePos.y) + vec3(-0.05f, 0.f, 0.05f), float(room->type)));
 		//second triangle
-		vertices->push_back(vec4(vec3(room->basePos, -10.f) + vec3(0.05f, -0.05f, 0.f), float(room->type)));
-		vertices->push_back(vec4(vec3(room->basePos, -10.f) + vec3(-0.05f, -0.05f, 0.f), float(room->type)));
-		vertices->push_back(vec4(vec3(room->basePos, -10.f) + vec3(-0.05f, 0.05f, 0.f), float(room->type)));
+		vertices->push_back(vec4(vec3(room->basePos.x, -10.f, room->basePos.y) + vec3(0.05f, 0.f, -0.05f), float(room->type)));
+		vertices->push_back(vec4(vec3(room->basePos.x, -10.f, room->basePos.y) + vec3(-0.05f, 0.f, -0.05f), float(room->type)));
+		vertices->push_back(vec4(vec3(room->basePos.x, -10.f, room->basePos.y) + vec3(-0.05f, 0.f, 0.05f), float(room->type)));
 
 		for (Room* neib : room->neighbours) {
 			if (room->index < neib->index) {
-				lines->push_back(vec4(vec3(room->basePos, -10.f), 2.f));
-				lines->push_back(vec4(vec3(neib->basePos, -10.f), 2.f));
+				lines->push_back(vec4(vec3(room->basePos.x, -10.f, room->basePos.y), 2.f));
+				lines->push_back(vec4(vec3(neib->basePos.x, -10.f, neib->basePos.y), 2.f));
 			}
 		}
 
-		outlines->push_back(vec4(room->upRightPos, -10.f, float(room->type)));
-		outlines->push_back(vec4(room->upRightPos.x, room->downLeftPos.y, -10.f, float(room->type)));
+		outlines->push_back(vec4(room->upRightPos.x, -10.f, room->upRightPos.y, float(room->type)));
+		outlines->push_back(vec4(room->upRightPos.x, -10.f, room->downLeftPos.y, float(room->type)));
 
-		outlines->push_back(vec4(room->upRightPos.x, room->downLeftPos.y, -10.f, float(room->type)));
-		outlines->push_back(vec4(room->downLeftPos, -10.f, float(room->type)));
+		outlines->push_back(vec4(room->upRightPos.x, -10.f, room->downLeftPos.y, float(room->type)));
+		outlines->push_back(vec4(room->downLeftPos.x, -10.f, room->downLeftPos.y, float(room->type)));
 
-		outlines->push_back(vec4(room->downLeftPos, -10.f, float(room->type)));
-		outlines->push_back(vec4(room->downLeftPos.x, room->upRightPos.y, -10.f, float(room->type)));
+		outlines->push_back(vec4(room->downLeftPos.x, -10.f, room->downLeftPos.y, float(room->type)));
+		outlines->push_back(vec4(room->downLeftPos.x, -10.f, room->upRightPos.y, float(room->type)));
 
-		outlines->push_back(vec4(room->downLeftPos.x, room->upRightPos.y, -10.f, float(room->type)));
-		outlines->push_back(vec4(room->upRightPos, -10.f, float(room->type)));
+		outlines->push_back(vec4(room->downLeftPos.x, -10.f, room->upRightPos.y, float(room->type)));
+		outlines->push_back(vec4(room->upRightPos.x, -10.f, room->upRightPos.y, float(room->type)));
 	}
 }
 
@@ -305,8 +305,8 @@ GLFWwindow* createGLFWWindow()
 
 void initFloorGraph(FloorGraph* floorGraph) {
 	floorGraph->addPublicRooms();
-	floorGraph->addOtherRooms(15, 60, 1, 5.f, 2, floorGraph->graph);	//add Private Rooms
-	floorGraph->addOtherRooms(5, 35, 2, 2.f, 1, floorGraph->graph);		//add Extra Rooms
+	floorGraph->addOtherRooms(15, 60, 1, 4.f, 2, floorGraph->graph);	//add Private Rooms
+	floorGraph->addOtherRooms(5, 35, 2, 1.5f, 1, floorGraph->graph);		//add Extra Rooms
 
 	queue<int> queue;
 
@@ -314,8 +314,6 @@ void initFloorGraph(FloorGraph* floorGraph) {
 	room->basePos = vec2(0.f, 0.f);
 	room->upRightPos = room->basePos;
 	room->downLeftPos = room->basePos;
-	room->upRightExpand = vec2(0.005f, 0.005f);
-	room->downLeftExpand = vec2(0.005f, 0.005f);
 	queue.push(room->index);
 
 	while (queue.size() > 0) {
@@ -330,9 +328,7 @@ void initFloorGraph(FloorGraph* floorGraph) {
 		for (Room* neib : room->neighbours) {
 			cout << neib->index << ", ";
 			if (room->index < neib->index) {
-				neib->basePos = vec2(float(rand() % 101 - 50) / 50.f, float(rand() % 101 - 50) / 50.f);
-				neib->upRightExpand = vec2(0.005f, 0.005f);
-				neib->downLeftExpand = vec2(0.005f, 0.005f);
+				neib->basePos = vec2(float(rand() % 11 - 5), float(rand() % 11 - 5));
 				queue.push(neib->index);
 			}
 		}
@@ -354,7 +350,7 @@ void setRoomsPos(FloorGraph* floorGraph) {
 	}
 
 	vector<Room*> siblings;
-	Room* papa = room;
+	Room* papa = new Room(-1, -1.f, -1);
 
 	while (queue.size() > 0) {
 		room = floorGraph->graph[queue.front()];
@@ -362,6 +358,7 @@ void setRoomsPos(FloorGraph* floorGraph) {
 
 		if (papa->index != room->parent->index) {
 			siblings.clear();
+			papa = room->parent;
 
 			for (Room* sibling : papa->neighbours) {
 				if (papa->index < sibling->index) {
@@ -369,15 +366,31 @@ void setRoomsPos(FloorGraph* floorGraph) {
 				}
 			}
 
-			for (int i = 0; i < int(siblings.size()); i++) {
-				for (int j = 0; j < int(siblings.size()); j++) {
-					if (i == j) continue;
-					vec2 dispVector = siblings[i]->basePos - siblings[j]->basePos;
-					siblings[i]->basePos = dispVector + siblings[j]->basePos;
+			if (papa->index != 0) {
+				vec2 papaDirectionVector = papa->parent->basePos - papa->basePos;
+				vec2 thisDirectionVector = siblings[0]->basePos - papa->basePos;
+				float numer = dot(papaDirectionVector, thisDirectionVector);
+				float denom = length(papaDirectionVector) * length(thisDirectionVector);
+				float angle = acos(numer / denom);
+				if (angle < (PI/2.f)) {
+					float phi = (3.f * PI / 2.f);
+					float oldX = papaDirectionVector.x;
+					float oldY = papaDirectionVector.y;
+					vec2 rotatedVec = vec2((oldX * cos(phi)) - (oldY * sin(phi)), (oldY * cos(phi)) + (oldX * sin(phi)));
+					siblings[0]->basePos = length(siblings[0]->basePos) * glm::normalize(rotatedVec);
 				}
 			}
 
-			papa = room->parent;
+			float theta = -(PI) / siblings.size();
+			if (papa->index == 0) {
+				theta = -(3.f * PI / 2.f) / siblings.size();
+			}
+			for (int i = 1; i < int(siblings.size()); i++) {
+				float oldX = siblings[i - 1]->basePos.x - papa->basePos.x;
+				float oldY = siblings[i - 1]->basePos.y - papa->basePos.y;
+				vec2 rotatedVec = glm::normalize(vec2((oldX * cos(theta)) - (oldY * sin(theta)), (oldY * cos(theta)) + (oldX * sin(theta))));
+				siblings[i]->basePos = (length(siblings[i]->basePos - papa->basePos) * rotatedVec) + papa->basePos;
+			}
 		}
 
 		if (papa->index != 0) {
@@ -387,22 +400,51 @@ void setRoomsPos(FloorGraph* floorGraph) {
 			float denom = length(papaDirectionVector) * length(thisDirectionVector);
 			float angle = acos(numer / denom) * (180.f / PI);
 			if (angle < 90.f) {
-				room->basePos = 3.f * glm::normalize(-1.f *  thisDirectionVector) + papa->basePos;
+				room->basePos = 2.5f * glm::normalize(-1.f *  thisDirectionVector) + papa->basePos;
 			} else {
-				room->basePos = 3.f * glm::normalize(thisDirectionVector) + papa->basePos;
+				room->basePos = 2.5f * glm::normalize(thisDirectionVector) + papa->basePos;
 			}
 		} else {
-			room->basePos = 3.f * glm::normalize(room->basePos);
+			room->basePos = 2.5f * glm::normalize(room->basePos);
 		}
 
-		room->basePos = ((float(room->size) / float(papa->size)) * (room->basePos - papa->basePos)) + papa->basePos;
-		room->upRightPos = room->basePos;
-		room->downLeftPos = room->basePos;
-
+		// if (papa->index != 0) {
+		// 	room->basePos = ((float(room->size) / float(papa->size)) * (room->basePos - papa->basePos)) + papa->basePos;
+		// }
+		
 		for (Room* neib : room->neighbours) {
 			if (room->index < neib->index) {
 				queue.push(neib->index);
 			}
+		}
+
+	}
+
+	for (Room* room : floorGraph->graph) {
+		vec2 dirVector;
+		if (room->index == 0) {
+			dirVector = room->basePos;
+		} else {
+			dirVector = (room->basePos - room->parent->basePos);
+		}
+
+		room->upRightPos = room->basePos;
+		room->downLeftPos = room->basePos;
+		
+		if (-dirVector.x < 0.f) {
+			room->leftExpand += 0.001f;
+			room->rightExpand -= 0.001f;
+		} else if (-dirVector.x > 0.f) {
+			room->rightExpand += 0.001f;
+			room->leftExpand -= 0.001f;
+		}
+
+		if (-dirVector.y < 0.f) {
+			room->downExpand += 0.001f;
+			room->upExpand -= 0.001f;
+		} else if (-dirVector.y > 0.f) {
+			room->upExpand += 0.001f;
+			room->downExpand -= 0.001f;
 		}
 	}
 }
@@ -410,34 +452,46 @@ void setRoomsPos(FloorGraph* floorGraph) {
 void expandRooms(FloorGraph* floorGraph) {
 	for (Room* room1 : floorGraph->graph) {
 		if (room1->area() < room1->size) {
-			room1->upRightPos += room1->upRightExpand;
-			room1->downLeftPos -= room1->downLeftExpand;
+			if (room1->rightExpand > 0.f)
+				room1->upRightPos.x += room1->rightExpand;
+			if (room1->upExpand > 0.f)
+				room1->upRightPos.y += room1->upExpand;
+			if (room1->leftExpand > 0.f)
+				room1->downLeftPos.x -= room1->leftExpand;
+			if (room1->downExpand > 0.f)
+				room1->downLeftPos.y -= room1->downExpand;
 		}
 
 		for (Room* room2 : floorGraph->graph) {
 			if (room1 == room2) continue;
 
-			if ((room1->basePos.x < room2->basePos.x) && (room1->basePos.y < room2->basePos.y)) {
-				if ((room1->upRightPos.x > room2->downLeftPos.x) && (room1->upRightPos.y > room2->downLeftPos.y)) {
-					if (room1->upRightPos.x > room2->downLeftPos.x + 0.01f) {
-						room1->upRightExpand.y = 0.f;
-						room2->downLeftExpand.y = 0.f;
+			if ((room1->type == 2) && (room2->type == 0)) {
+				continue;
+			} else if ((room2->type == 2) && (room1->type == 0)) {
+				continue;
+			}
+
+			if ((room1->basePos.x <= room2->basePos.x) && (room1->basePos.y <= room2->basePos.y)) {
+				if ((room1->upRightPos.x >= room2->downLeftPos.x) && (room1->upRightPos.y >= room2->downLeftPos.y)) {
+					if (room1->upRightPos.x >= room2->downLeftPos.x + 0.05f) {
+						room1->upExpand -= 0.01f;
+						room2->downExpand -= 0.01f;
 					}
-					if (room1->upRightPos.y > room2->downLeftPos.y + 0.01f) {
-						room1->upRightExpand.x = 0.f;
-						room2->downLeftExpand.x = 0.f;
+					if (room1->upRightPos.y >= room2->downLeftPos.y + 0.05f) {
+						room1->rightExpand -= 0.01f;
+						room2->leftExpand -= 0.01f;
 					}
 				}
 			}
-			else if ((room1->basePos.x < room2->basePos.x) && (room1->basePos.y > room2->basePos.y)) {
-				if ((room1->upRightPos.x > room2->downLeftPos.x) && (room1->downLeftPos.y < room2->upRightPos.y)) {
-					if (room1->upRightPos.x > room2->downLeftPos.x + 0.01f) {
-						room1->downLeftExpand.y = 0.f;
-						room2->upRightExpand.y = 0.f;
+			else if ((room1->basePos.x <= room2->basePos.x) && (room1->basePos.y >= room2->basePos.y)) {
+				if ((room1->upRightPos.x >= room2->downLeftPos.x) && (room1->downLeftPos.y <= room2->upRightPos.y)) {
+					if (room1->upRightPos.x >= room2->downLeftPos.x + 0.05f) {
+						room1->downExpand -= 0.01f;
+						room2->upExpand -= 0.01f;
 					}
-					if (room1->downLeftPos.y < room2->upRightPos.y - 0.01f) {
-						room1->upRightExpand.x = 0.f;
-						room2->downLeftExpand.x = 0.f;
+					if (room1->downLeftPos.y <= room2->upRightPos.y - 0.05f) {
+						room1->rightExpand -= 0.01f;
+						room2->leftExpand -= 0.01f;
 					}
 				}
 			}
@@ -497,7 +551,7 @@ int main(int argc, char *argv[]) {
 	initFloorGraph(&(floorGraph));
 	setRoomsPos(&(floorGraph));
 
-	cam = Camera(vec3(0, 0, -100), vec3(0, 0, 0));
+	cam = Camera(vec3(0, -500, -1), vec3(0, 1, 0));
 	//float fovy, float aspect, float zNear, float zFar
 	mat4 perspectiveMatrix = perspective(radians(80.f), 1.f, 0.1f, 500.f);
 
@@ -514,12 +568,12 @@ int main(int argc, char *argv[]) {
 		loadBuffer(vboRoomOutlines, roomOutlineDrawInfo);
 
 		float move = 0.05f;
-		if (ePressed) cam.pos += cam.dir*move;
-		if (qPressed) cam.pos -= cam.dir*move;
+		if (wPressed) cam.pos += cam.dir*move;
+		if (sPressed) cam.pos -= cam.dir*move;
 		if (dPressed) cam.pos += cam.right*move;
 		if (aPressed) cam.pos -= cam.right*move;
-		if (wPressed) cam.pos += cam.up*move;
-		if (sPressed) cam.pos -= cam.up*move;
+		if (qPressed) cam.pos += cam.up*move;
+		if (ePressed) cam.pos -= cam.up*move;
 
 		loadUniforms(&cam, program, perspectiveMatrix, mat4(1.f));
 

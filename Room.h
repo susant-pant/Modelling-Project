@@ -17,8 +17,10 @@ public:
     vec2 upRightPos;
     vec2 downLeftPos;
 
-    vec2 upRightExpand;
-    vec2 downLeftExpand;
+    float upExpand = 0.005f;
+    float rightExpand = 0.005f;
+    float downExpand = 0.005f;
+    float leftExpand = 0.005f;
 
     Room(int _type, float _size, int _index):type(_type), size(_size), index(_index){}
 
