@@ -19,7 +19,7 @@ public:
 };
 
 void FloorGraph::addPublicRooms() {
-  graph.push_back(new Room(0, 10.f, 0));
+  graph.push_back(new Room(0, 8.f, 0));
 
   uint count = 0;
   Room *currentRoom = graph[count];
@@ -34,7 +34,7 @@ void FloorGraph::addPublicRooms() {
 
     int random = rand() % 25;
     if(random <= probability || count < 1)
-      concatenateRooms(currentRoom->createRooms(0, 10.f, graph.size(), numNewRooms));
+      concatenateRooms(currentRoom->createRooms(0, 8.5f, graph.size(), numNewRooms));
 
     numNewRooms--;
 

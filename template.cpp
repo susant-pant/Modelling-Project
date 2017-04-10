@@ -305,8 +305,8 @@ GLFWwindow* createGLFWWindow()
 
 void initFloorGraph(FloorGraph* floorGraph) {
 	floorGraph->addPublicRooms();
-	floorGraph->addOtherRooms(15, 60, 1, 4.f, 2, floorGraph->graph);	//add Private Rooms
-	floorGraph->addOtherRooms(5, 35, 2, 1.5f, 1, floorGraph->graph);		//add Extra Rooms
+	floorGraph->addOtherRooms(15, 60, 1, 5.5f, 2, floorGraph->graph);	//add Private Rooms
+	floorGraph->addOtherRooms(5, 35, 2, 2.5f, 1, floorGraph->graph);		//add Extra Rooms
 
 	queue<int> queue;
 
@@ -400,15 +400,15 @@ void setRoomsPos(FloorGraph* floorGraph) {
 			float denom = length(papaDirectionVector) * length(thisDirectionVector);
 			float angle = acos(numer / denom) * (180.f / PI);
 			if (angle < 90.f) {
-				room->basePos = 2.5f * glm::normalize(-1.f *  thisDirectionVector) + papa->basePos;
+				room->basePos = 2.2f * glm::normalize(-1.f *  thisDirectionVector) + papa->basePos;
 			} else {
-				room->basePos = 2.5f * glm::normalize(thisDirectionVector) + papa->basePos;
+				room->basePos = 2.2f * glm::normalize(thisDirectionVector) + papa->basePos;
 			}
 		} else {
-			room->basePos = 2.5f * glm::normalize(room->basePos);
+			room->basePos = 2.2f * glm::normalize(room->basePos);
 		}
 
-		// if (papa->index != 0) {
+		// if (room->type == 2) {
 		// 	room->basePos = ((float(room->size) / float(papa->size)) * (room->basePos - papa->basePos)) + papa->basePos;
 		// }
 		
@@ -417,7 +417,6 @@ void setRoomsPos(FloorGraph* floorGraph) {
 				queue.push(neib->index);
 			}
 		}
-
 	}
 
 	for (Room* room : floorGraph->graph) {
@@ -577,7 +576,7 @@ int main(int argc, char *argv[]) {
 
 		loadUniforms(&cam, program, perspectiveMatrix, mat4(1.f));
 
-		// call function to draw our scene
+		//call function to draw our scene
 		drawMode = GL_TRIANGLES;
 		render(vaoRooms, 0, roomDrawInfo.size());
 		drawMode = GL_LINES;
