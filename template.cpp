@@ -33,6 +33,7 @@
 #define PI 3.14159265359
 
 FloorGraph* floorGraph;
+mat4 perspectiveMatrix;
 
 using namespace std;
 using namespace glm;
@@ -69,7 +70,7 @@ bool aPressed = false;
 bool ePressed = false;
 bool qPressed = false;
 
-int scene = 1;
+bool isExpanding = true;
 
 // handles keyboard input events
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -78,14 +79,8 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 		glfwSetWindowShouldClose(window, GL_TRUE);
 	}
 	
-	if (key == GLFW_KEY_1 && action == GLFW_PRESS) {
-		scene = 1;
-	}
-	else if (key == GLFW_KEY_2 && action == GLFW_PRESS) {
-		scene = 2;
-	}
-	else if (key == GLFW_KEY_3 && action == GLFW_PRESS) {
-		scene = 3;
+	if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+		isExpanding = !isExpanding;
 	}
 
 	if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_RELEASE)) {
@@ -129,11 +124,89 @@ void mousePosCallback(GLFWwindow* window, double xpos, double ypos)
 	vec2 newPos = vec2(xpos/(double)vp[2], -ypos/(double)vp[3])*2.f - vec2(1.f);
 	vec2 diff = newPos - mousePos;
 
-	if(rightmousePressed)
+	if (leftmousePressed)
 		cam.cameraRotation(-diff.x, diff.y);
+	if (rightmousePressed)
+	{
+		mat4 view = cam.getMatrix();
+		mat4 proj = perspectiveMatrix;
+
+		uint selectedRoom = 0;
+		int width, height;
+		int nodeType = -1; // 0 is basePos, 1 is upRightPos, 2 is downLeftPos;
+
+		GLint params [4];
+		glGetIntegerv(GL_VIEWPORT, params);
+
+		width = params[2];
+		height = params[3];
+
+		float depth;
+		vec2  v;
+		vec3 projCursor;
+
+		vec3 screenPos;
+		for(Room* room : floorGraph->graph)
+		{
+			/* test if the room's basePos is being selected */
+			screenPos = project(vec3(room->basePos.x, -10.f, room->basePos.y), view, proj, vec4(0.f,0.f,(float)width, (float)height));
+			depth = screenPos.z;
+			v = vec2(xpos, height-ypos);
+			projCursor = unProject(vec3(v.x,v.y,depth), view, proj, vec4(0.f,0.f,(float)width, (float)height));
+
+			if(length(projCursor - vec3(room->basePos.x, -10.f, room->basePos.y)) < 0.5f){
+				nodeType = 0;
+				break;
+			}
+
+			/* test if the room's upRightPos is being selected */
+			screenPos = project(vec3(room->upRightPos.x, -10.f, room->upRightPos.y), view, proj, vec4(0.f,0.f,(float)width, (float)height));
+			depth = screenPos.z;
+			v = vec2(xpos, height-ypos);
+			projCursor = unProject(vec3(v.x,v.y,depth), view, proj, vec4(0.f,0.f,(float)width, (float)height));
+
+			if(length(projCursor - vec3(room->upRightPos.x, -10.f, room->upRightPos.y)) < 0.5f){
+				nodeType = 1;
+				break;
+			}
+
+			/* test if the room's downLeftPos is being selected */
+			screenPos = project(vec3(room->downLeftPos.x, -10.f, room->downLeftPos.y), view, proj, vec4(0.f,0.f,(float)width, (float)height));
+			depth = screenPos.z;
+			v = vec2(xpos, height-ypos);
+			projCursor = unProject(vec3(v.x,v.y,depth), view, proj, vec4(0.f,0.f,(float)width, (float)height));
+
+			if(length(projCursor - vec3(room->downLeftPos.x, -10.f, room->downLeftPos.y)) < 0.1f){
+				nodeType = 2;
+				break;
+			}
+
+			selectedRoom++;
+		}
+
+		if(selectedRoom < floorGraph->graph.size()) {
+			Room* room = floorGraph->graph[selectedRoom];
+
+			vec2 upRightDisp = room->upRightPos - room->basePos;
+			vec2 downLeftDisp = room->downLeftPos - room->basePos;
+
+			vec3 pos3d = unProject(vec3(xpos, height-ypos, depth), view, proj, vec4(0.f,0.f,(float)width, (float)height));
+			if (nodeType == 0) {
+				room->basePos = vec2(pos3d.x, pos3d.z);
+				room->upRightPos = room->basePos + upRightDisp;
+				room->downLeftPos = room->basePos + downLeftDisp;
+			} else if (nodeType == 1) {
+				room->upRightPos = vec2(pos3d.x, pos3d.z);
+			} else if (nodeType == 2) {
+				room->downLeftPos = vec2(pos3d.x, pos3d.z);
+			}
+		}
+		
+	}
 
 	mousePos = newPos;
 }
+
 
 void resizeCallback(GLFWwindow* window, int width, int height)
 {
@@ -213,12 +286,12 @@ bool loadUniforms(Camera* cam, GLuint program, mat4 perspective, mat4 modelview)
 
 	mat4 camMatrix = cam->getMatrix();
 
-	glUniformMatrix4fv(glGetUniformLocation(program, "cameraMatrix"),
+	glUniformMatrix4fv(glGetUniformLocation(program, "viewMatrix"),
 						1,
 						false,
 						&camMatrix[0][0]);
 
-	glUniformMatrix4fv(glGetUniformLocation(program, "modelviewMatrix"),
+	glUniformMatrix4fv(glGetUniformLocation(program, "modelMatrix"),
 						1,
 						false,
 						&modelview[0][0]);
@@ -458,15 +531,32 @@ void setRoomsPos() {
 void expandRooms() {
 	for (Room* room1 : floorGraph->graph) {
 		if (room1->area() < room1->size) {
-			if (room1->rightExpand > 0.f)
+			if (room1->rightExpand > 0.f) {
 				room1->upRightPos.x += room1->rightExpand;
-			if (room1->upExpand > 0.f)
+			} else {
+				room1->rightExpand = 0.f;
+			}
+			if (room1->upExpand > 0.f) {
 				room1->upRightPos.y += room1->upExpand;
-			if (room1->leftExpand > 0.f)
+			} else {
+				room1->upExpand = 0.f;
+			}
+			if (room1->leftExpand > 0.f) {
 				room1->downLeftPos.x -= room1->leftExpand;
-			if (room1->downExpand > 0.f)
+			} else {
+				room1->leftExpand = 0.f;
+			}
+			if (room1->downExpand > 0.f) {
 				room1->downLeftPos.y -= room1->downExpand;
+			} else {
+				room1->downExpand = 0.f;
+			}
 		}
+
+		room1->upExpand += 0.0001f;
+		room1->rightExpand += 0.0001f;
+		room1->downExpand += 0.0001f;
+		room1->leftExpand += 0.0001f;
 
 		for (Room* room2 : floorGraph->graph) {
 			if (room1 == room2) continue;
@@ -559,14 +649,14 @@ int main(int argc, char *argv[]) {
 
 	cam = Camera(vec3(0, -500, -1), vec3(0, 1, 0));
 	//float fovy, float aspect, float zNear, float zFar
-	mat4 perspectiveMatrix = perspective(radians(80.f), 1.f, 0.1f, 500.f);
+	perspectiveMatrix = perspective(radians(80.f), 1.f, 0.1f, 500.f);
 
 	// run an event-triggered main loop
 	while (!glfwWindowShouldClose(window)) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUseProgram(program);
 
-		expandRooms();
+		if (isExpanding) expandRooms();
 
 		drawRooms(&roomDrawInfo, &neibDrawInfo, &roomOutlineDrawInfo);
 		loadBuffer(vboRooms, roomDrawInfo);
