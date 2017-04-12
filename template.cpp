@@ -71,6 +71,7 @@ bool ePressed = false;
 bool qPressed = false;
 
 bool isExpanding = true;
+bool showWalls = false;
 
 // handles keyboard input events
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -81,6 +82,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 	
 	if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
 		isExpanding = !isExpanding;
+	}
+
+	if (key == GLFW_KEY_LEFT_CONTROL && action == GLFW_PRESS) {
+		showWalls = !showWalls;
 	}
 
 	if (key == GLFW_KEY_W && (action == GLFW_PRESS || action == GLFW_RELEASE)) {
@@ -165,7 +170,7 @@ void mousePosCallback(GLFWwindow* window, double xpos, double ypos)
 			v = vec2(xpos, height-ypos);
 			projCursor = unProject(vec3(v.x,v.y,depth), view, proj, vec4(0.f,0.f,(float)width, (float)height));
 
-			if(length(projCursor - vec3(room->upRightPos.x, -10.f, room->upRightPos.y)) < 0.5f){
+			if(length(projCursor - vec3(room->upRightPos.x, -10.f, room->upRightPos.y)) < 0.1f){
 				nodeType = 1;
 				break;
 			}
@@ -176,7 +181,7 @@ void mousePosCallback(GLFWwindow* window, double xpos, double ypos)
 			v = vec2(xpos, height-ypos);
 			projCursor = unProject(vec3(v.x,v.y,depth), view, proj, vec4(0.f,0.f,(float)width, (float)height));
 
-			if(length(projCursor - vec3(room->downLeftPos.x, -10.f, room->downLeftPos.y)) < 0.1f){
+			if(length(projCursor - vec3(room->downLeftPos.x, -10.f, room->downLeftPos.y)) < 0.05f){
 				nodeType = 2;
 				break;
 			}
@@ -349,6 +354,48 @@ void drawRooms(vector<vec4>* vertices, vector<vec4>* lines, vector<vec4>* outlin
 
 		outlines->push_back(vec4(room->downLeftPos.x, -10.f, room->upRightPos.y, float(room->type)));
 		outlines->push_back(vec4(room->upRightPos.x, -10.f, room->upRightPos.y, float(room->type)));
+	}
+}
+
+void drawWalls(vector<vec4>* walls) {
+	walls->clear();
+	for (Room* room : floorGraph->graph) {
+		/* Wall 1 */
+			/* Triangle 1 */
+			walls->push_back(vec4(room->upRightPos.x, -10.f, room->upRightPos.y, float(room->type)));
+			walls->push_back(vec4(room->upRightPos.x, -9.f, room->upRightPos.y, float(room->type)));
+			walls->push_back(vec4(room->upRightPos.x, -9.f, room->downLeftPos.y, float(room->type)));
+			/* Triangle 2 */
+			walls->push_back(vec4(room->upRightPos.x, -9.f, room->downLeftPos.y, float(room->type)));
+			walls->push_back(vec4(room->upRightPos.x, -10.f, room->downLeftPos.y, float(room->type)));
+			walls->push_back(vec4(room->upRightPos.x, -10.f, room->upRightPos.y, float(room->type)));
+		/* Wall 2 */
+			/* Triangle 1 */
+			walls->push_back(vec4(room->upRightPos.x, -10.f, room->downLeftPos.y, float(room->type)));
+			walls->push_back(vec4(room->upRightPos.x, -9.f, room->downLeftPos.y, float(room->type)));
+			walls->push_back(vec4(room->downLeftPos.x, -9.f, room->downLeftPos.y, float(room->type)));
+			/* Triangle 2 */
+			walls->push_back(vec4(room->downLeftPos.x, -9.f, room->downLeftPos.y, float(room->type)));
+			walls->push_back(vec4(room->downLeftPos.x, -10.f, room->downLeftPos.y, float(room->type)));
+			walls->push_back(vec4(room->upRightPos.x, -10.f, room->downLeftPos.y, float(room->type)));
+		/* Wall 3 */
+			/* Triangle 1 */
+			walls->push_back(vec4(room->downLeftPos.x, -10.f, room->downLeftPos.y, float(room->type)));
+			walls->push_back(vec4(room->downLeftPos.x, -9.f, room->downLeftPos.y, float(room->type)));
+			walls->push_back(vec4(room->downLeftPos.x, -9.f, room->upRightPos.y, float(room->type)));
+			/* Triangle 2 */
+			walls->push_back(vec4(room->downLeftPos.x, -9.f, room->upRightPos.y, float(room->type)));
+			walls->push_back(vec4(room->downLeftPos.x, -10.f, room->upRightPos.y, float(room->type)));
+			walls->push_back(vec4(room->downLeftPos.x, -10.f, room->downLeftPos.y, float(room->type)));
+		/* Wall 4 */
+			/* Triangle 1 */
+			walls->push_back(vec4(room->downLeftPos.x, -10.f, room->upRightPos.y, float(room->type)));
+			walls->push_back(vec4(room->downLeftPos.x, -9.f, room->upRightPos.y, float(room->type)));
+			walls->push_back(vec4(room->upRightPos.x, -9.f, room->upRightPos.y, float(room->type)));
+
+			walls->push_back(vec4(room->upRightPos.x, -9.f, room->upRightPos.y, float(room->type)));
+			walls->push_back(vec4(room->upRightPos.x, -10.f, room->upRightPos.y, float(room->type)));
+			walls->push_back(vec4(room->downLeftPos.x, -10.f, room->upRightPos.y, float(room->type)));
 	}
 }
 
@@ -551,12 +598,12 @@ void expandRooms() {
 			} else {
 				room1->downExpand = 0.f;
 			}
-		}
 
-		room1->upExpand += 0.0001f;
-		room1->rightExpand += 0.0001f;
-		room1->downExpand += 0.0001f;
-		room1->leftExpand += 0.0001f;
+			room1->upExpand += 0.0001f;
+			room1->rightExpand += 0.0001f;
+			room1->downExpand += 0.0001f;
+			room1->leftExpand += 0.0001f;
+		}
 
 		for (Room* room2 : floorGraph->graph) {
 			if (room1 == room2) continue;
@@ -636,10 +683,17 @@ int main(int argc, char *argv[]) {
 	glGenBuffers(VertexBuffers::COUNT, vboRoomOutlines.id);
 	initVAO(vaoRoomOutlines, vboRoomOutlines);
 
+	GLuint vaoWalls;
+	VertexBuffers vboWalls;
+	glGenVertexArrays(1, &vaoWalls);
+	glGenBuffers(VertexBuffers::COUNT, vboWalls.id);
+	initVAO(vaoWalls, vboWalls);
+
 	//Geometry information
 	vector<vec4> roomDrawInfo;
 	vector<vec4> neibDrawInfo;
 	vector<vec4> roomOutlineDrawInfo;
+	vector<vec4> wallDrawInfo;
 
 	srand(time(NULL));
 
@@ -659,9 +713,11 @@ int main(int argc, char *argv[]) {
 		if (isExpanding) expandRooms();
 
 		drawRooms(&roomDrawInfo, &neibDrawInfo, &roomOutlineDrawInfo);
+		drawWalls(&wallDrawInfo);
 		loadBuffer(vboRooms, roomDrawInfo);
 		loadBuffer(vboNeibs, neibDrawInfo);
 		loadBuffer(vboRoomOutlines, roomOutlineDrawInfo);
+		loadBuffer(vboWalls, wallDrawInfo);
 
 		float move = 0.05f;
 		if (wPressed) cam.pos += cam.dir*move;
@@ -676,9 +732,10 @@ int main(int argc, char *argv[]) {
 		//call function to draw our scene
 		drawMode = GL_TRIANGLES;
 		render(vaoRooms, 0, roomDrawInfo.size());
+		if (showWalls) render(vaoWalls, 0, wallDrawInfo.size());
+
 		drawMode = GL_LINES;
 		render(vaoNeibs, 0, neibDrawInfo.size());
-		drawMode = GL_LINES;
 		render(vaoRoomOutlines, 0, roomOutlineDrawInfo.size());
 
 		// scene is rendered to the back buffer, so swap to front for display
@@ -694,6 +751,8 @@ int main(int argc, char *argv[]) {
 	glDeleteBuffers(VertexBuffers::COUNT, vboNeibs.id);
 	glDeleteVertexArrays(1, &vaoRoomOutlines);
 	glDeleteBuffers(VertexBuffers::COUNT, vboRoomOutlines.id);
+	glDeleteVertexArrays(1, &vaoWalls);
+	glDeleteBuffers(VertexBuffers::COUNT, vboWalls.id);
 	glDeleteProgram(program);
 
 	glfwDestroyWindow(window);
