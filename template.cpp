@@ -32,6 +32,8 @@
 
 #define PI 3.14159265359
 
+FloorGraph* floorGraph;
+
 using namespace std;
 using namespace glm;
 
@@ -106,12 +108,17 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 	}
 }
 
-bool mousePressed = false;
+bool leftmousePressed = false;
+bool rightmousePressed = false;
 
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
-	if( (action == GLFW_PRESS) || (action == GLFW_RELEASE) )
-		mousePressed = !mousePressed;
+	if( (action == GLFW_PRESS) || (action == GLFW_RELEASE) ){
+		if(button == GLFW_MOUSE_BUTTON_LEFT)
+			leftmousePressed = !leftmousePressed;
+		else if(button == GLFW_MOUSE_BUTTON_RIGHT)
+			rightmousePressed = !rightmousePressed;
+	}
 }
 
 void mousePosCallback(GLFWwindow* window, double xpos, double ypos)
@@ -122,7 +129,7 @@ void mousePosCallback(GLFWwindow* window, double xpos, double ypos)
 	vec2 newPos = vec2(xpos/(double)vp[2], -ypos/(double)vp[3])*2.f - vec2(1.f);
 	vec2 diff = newPos - mousePos;
 
-	if(mousePressed)
+	if(rightmousePressed)
 		cam.cameraRotation(-diff.x, diff.y);
 
 	mousePos = newPos;
@@ -237,7 +244,7 @@ void render(GLuint vao, int startElement, int numElements)
 	CheckGLErrors("render");
 }
 
-void drawRooms(vector<vec4>* vertices, vector<vec4>* lines, vector<vec4>* outlines, FloorGraph* floorGraph) {
+void drawRooms(vector<vec4>* vertices, vector<vec4>* lines, vector<vec4>* outlines) {
 	vertices->clear();
 	lines->clear();
 	outlines->clear();
@@ -303,7 +310,7 @@ GLFWwindow* createGLFWWindow()
 	return window;
 }
 
-void initFloorGraph(FloorGraph* floorGraph) {
+void initFloorGraph() {
 	floorGraph->addPublicRooms();
 	floorGraph->addOtherRooms(15, 60, 1, 5.5f, 2, floorGraph->graph);	//add Private Rooms
 	floorGraph->addOtherRooms(5, 35, 2, 2.5f, 1, floorGraph->graph);		//add Extra Rooms
@@ -341,7 +348,7 @@ void initFloorGraph(FloorGraph* floorGraph) {
 	}
 }
 
-void setRoomsPos(FloorGraph* floorGraph) {
+void setRoomsPos() {
 	queue<int> queue;
 
 	Room* room = floorGraph->graph[0];
@@ -448,7 +455,7 @@ void setRoomsPos(FloorGraph* floorGraph) {
 	}
 }
 
-void expandRooms(FloorGraph* floorGraph) {
+void expandRooms() {
 	for (Room* room1 : floorGraph->graph) {
 		if (room1->area() < room1->size) {
 			if (room1->rightExpand > 0.f)
@@ -546,9 +553,9 @@ int main(int argc, char *argv[]) {
 
 	srand(time(NULL));
 
-	FloorGraph floorGraph = FloorGraph();
-	initFloorGraph(&(floorGraph));
-	setRoomsPos(&(floorGraph));
+	floorGraph = new FloorGraph();
+	initFloorGraph();
+	setRoomsPos();
 
 	cam = Camera(vec3(0, -500, -1), vec3(0, 1, 0));
 	//float fovy, float aspect, float zNear, float zFar
@@ -559,9 +566,9 @@ int main(int argc, char *argv[]) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUseProgram(program);
 
-		expandRooms(&(floorGraph));
+		expandRooms();
 
-		drawRooms(&roomDrawInfo, &neibDrawInfo, &roomOutlineDrawInfo, &floorGraph);
+		drawRooms(&roomDrawInfo, &neibDrawInfo, &roomOutlineDrawInfo);
 		loadBuffer(vboRooms, roomDrawInfo);
 		loadBuffer(vboNeibs, neibDrawInfo);
 		loadBuffer(vboRoomOutlines, roomOutlineDrawInfo);
