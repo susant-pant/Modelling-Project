@@ -82,6 +82,12 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 	
 	if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
 		isExpanding = !isExpanding;
+		for (Room* room : floorGraph->graph) {
+			room->upExpand = 0.f;
+			room->rightExpand = 0.f;
+			room->downExpand = 0.f;
+			room->leftExpand = 0.f;
+		}
 	}
 
 	if (key == GLFW_KEY_LEFT_CONTROL && action == GLFW_PRESS) {
@@ -181,7 +187,7 @@ void mousePosCallback(GLFWwindow* window, double xpos, double ypos)
 			v = vec2(xpos, height-ypos);
 			projCursor = unProject(vec3(v.x,v.y,depth), view, proj, vec4(0.f,0.f,(float)width, (float)height));
 
-			if(length(projCursor - vec3(room->downLeftPos.x, -10.f, room->downLeftPos.y)) < 0.05f){
+			if(length(projCursor - vec3(room->downLeftPos.x, -10.f, room->downLeftPos.y)) < 0.1f){
 				nodeType = 2;
 				break;
 			}
@@ -620,7 +626,7 @@ void expandRooms() {
 						room1->upExpand -= 0.01f;
 						room2->downExpand -= 0.01f;
 					}
-					if (room1->upRightPos.y >= room2->downLeftPos.y + 0.05f) {
+					else if (room1->upRightPos.y >= room2->downLeftPos.y + 0.05f) {
 						room1->rightExpand -= 0.01f;
 						room2->leftExpand -= 0.01f;
 					}
@@ -632,7 +638,7 @@ void expandRooms() {
 						room1->downExpand -= 0.01f;
 						room2->upExpand -= 0.01f;
 					}
-					if (room1->downLeftPos.y <= room2->upRightPos.y - 0.05f) {
+					else if (room1->downLeftPos.y <= room2->upRightPos.y - 0.05f) {
 						room1->rightExpand -= 0.01f;
 						room2->leftExpand -= 0.01f;
 					}
